@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚽ Partida em Andamento - Pelada 3</title>
+    <link rel="stylesheet" href="partida.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="database.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header com Cronômetro -->
+        <header class="match-header">
+            <div class="timer-container">
+                <div class="timer-controls">
+                    <button id="play-pause-btn" class="timer-control-btn">
+                        <span class="emoji">▶️</span>
+                    </button>
+                    
+                    <div class="timer-display-wrapper">
+                        <div class="timer-display" id="timer-display">10:00</div>
+                        <div class="timer-status" id="timer-status">Cronômetro Parado</div>
+                    </div>
+                    
+                    <button id="reset-btn" class="timer-control-btn">
+                        <span class="emoji">🔄</span>
+                    </button>
+                </div>
+                <div class="consecutive-wins" id="consecutive-wins">Vitórias consecutivas: 0/3</div>
+            </div>
+        </header>
+
+        <!-- Placar Central com Cores dos Times -->
+        <section class="scoreboard-section">
+            <button id="team-a-color" class="team-color-btn" title="Clique para trocar cores">
+                <span class="color-circle" id="color-circle-a"></span>
+            </button>
+            
+            <div class="scoreboard">
+                <div class="team-score">
+                    <div class="score" id="score-a">0</div>
+                </div>
+                <div class="vs">x</div>
+                <div class="team-score">
+                    <div class="score" id="score-b">0</div>
+                </div>
+            </div>
+            
+            <button id="team-b-color" class="team-color-btn" title="Clique para trocar cores">
+                <span class="color-circle" id="color-circle-b"></span>
+            </button>
+        </section>
+
+        <!-- Times e Controles -->
+        <section class="match-content">
+            <!-- Time A -->
+            <div class="team-section">
+                <div class="team-header">
+                    <h3>TIME A</h3>
+                </div>
+                <div class="players-list" id="team-a-players">
+                    <!-- Jogadores do time A serão inseridos aqui -->
+                </div>
+            </div>
+
+            <!-- Time B -->
+            <div class="team-section">
+                <div class="team-header">
+                    <h3>TIME B</h3>
+                </div>
+                <div class="players-list" id="team-b-players">
+                    <!-- Jogadores do time B serão inseridos aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Controles da Partida -->
+        <section class="match-controls">
+            <button id="goal-team-a" class="goal-btn team-a-goal">
+                <span class="text">Gol ⚽</span>
+            </button>
+            
+            <button id="var-btn" class="control-btn var-btn">
+                <span class="var-text">VAR</span>
+            </button>
+            
+            <button id="goal-team-b" class="goal-btn team-b-goal">
+                <span class="text">Gol ⚽</span>
+            </button>
+        </section>
+        
+        <!-- Finalizar Partida -->
+        <section class="finish-section">
+            <button id="finish-btn" class="control-btn finish-btn">
+                <span class="emoji">🏁</span>
+                <span class="text">Finalizar Partida</span>
+            </button>
+        </section>
+
+        <!-- Histórico de Ações (para VAR) -->
+        <div id="actions-history" class="actions-history" style="display: none;">
+            <!-- Histórico para desfazer ações -->
+        </div>
+    </div>
+
+
+
+    <!-- Footer Mobile -->
+    <footer class="footer-mobile">
+        <nav class="nav-mobile">
+            <a href="fila.html" class="nav-item">
+                <span class="emoji">📋</span>
+            </a>
+            <a href="partida.html" class="nav-item active">
+                <span class="emoji">⚽</span>
+            </a>
+            <a href="regras.html" class="nav-item">
+                <span class="emoji">⚙️</span>
+            </a>
+        </nav>
+    </footer>
+
+    <!-- Modal de Confirmações -->
+    <div id="modal-confirmacao" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-titulo">Confirmação</h3>
+            <p id="modal-mensagem">Tem certeza?</p>
+            <div class="modal-buttons">
+                <button id="modal-cancelar" class="btn-cancel">❌ Cancelar</button>
+                <button id="modal-confirmar" class="btn-confirm">✅ Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela Sem Jogo Ativo -->
+    <div id="no-game-screen" class="no-game-screen" style="display: none;">
+        <div class="no-game-content">
+            <div class="no-game-animation">
+                <div class="ball-container">
+                    <div class="ball">⚽</div>
+                    <div class="ball-shadow"></div>
+                </div>
+                <div class="field-lines">
+                    <div class="line line-1"></div>
+                    <div class="line line-2"></div>
+                    <div class="line line-3"></div>
+                </div>
+            </div>
+            
+            <div class="no-game-text">
+                <h2>🎮 Nenhum Jogo em Andamento</h2>
+                <p>Não há partida ativa no momento.</p>
+                <p>Vá para a fila e inicie uma nova partida!</p>
+            </div>
+            
+            <div class="no-game-actions">
+                <button id="go-to-queue-btn" class="go-to-queue-btn">
+                    <span class="emoji">📋</span>
+                    <span class="text">Ir para Fila</span>
+                </button>
+                
+                <button id="refresh-game-btn" class="refresh-game-btn">
+                    <span class="emoji">🔄</span>
+                    <span class="text">Verificar Novamente</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading">
+        <div class="loading-spinner">⚽</div>
+        <p>Carregando partida...</p>
+    </div>
+
+    <script src="vitoria-controle.js"></script>
+    <script src="partida.js"></script>
+</body>
+</html>

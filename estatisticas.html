@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Estatísticas - Pelada 3</title>
+    <link rel="stylesheet" href="estatisticas.css">
+</head>
+<body>
+    <main class="main">
+        <div class="container">
+            <!-- Header -->
+            <section class="header-card">
+                <h2>📊 Estatísticas da Pelada 📊</h2>
+            </section>
+
+            <!-- Busca Individual -->
+            <section class="search-section">
+                <h3>🔍 Estatísticas Individuais</h3>
+                <div class="search-container">
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="search-player" placeholder="Digite o nome do jogador..." class="search-input" autocomplete="off">
+                        <div id="player-suggestions" class="suggestions-dropdown"></div>
+                    </div>
+                    <button id="clear-search" class="clear-btn" style="display: none;">✕</button>
+                </div>
+            </section>
+
+            <!-- Estatísticas Individuais -->
+            <section class="individual-stats" id="individual-stats" style="display: none;">
+                <h4 id="player-name-title">Estatísticas de</h4>
+                
+                <!-- Cards Básicos -->
+                <div class="summary-cards">
+                        <div class="summary-card">
+                            <div class="card-icon">⚽</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-partidas">0</div>
+                                <div class="card-label">Partidas</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">🥅</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-gols">0</div>
+                                <div class="card-label">Gols</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">🏆</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-vitorias">0</div>
+                                <div class="card-label">Vitórias</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">🤝</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-empates">0</div>
+                                <div class="card-label">Empates</div>
+                            </div>
+                        </div>
+                    
+                        <div class="summary-card">
+                            <div class="card-icon">🎯</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-conversao">0%</div>
+                                <div class="card-label">Taxa de Conversão</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">⚖️</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-aproveitamento">0%</div>
+                                <div class="card-label">Aproveitamento</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">📈</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-media-gols">0.0</div>
+                                <div class="card-label">Média de Gols</div>
+                            </div>
+                        </div>
+                    
+                        <div class="summary-card">
+                            <div class="card-icon">⏱️</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-tempo">0h 0min</div>
+                                <div class="card-label">Tempo Total</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">⏰</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-tempo-medio">0min</div>
+                                <div class="card-label">Tempo Médio/Partida</div>
+                            </div>
+                        </div>
+                    
+                        <div class="summary-card">
+                            <div class="card-icon">�</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-sessoes">0</div>
+                                <div class="card-label">Sessões Participadas</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">⭐</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-mvp">0</div>
+                                <div class="card-label">Partidas Como MVP</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">👥</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-parceiro" >-</div>
+                                <div class="card-label">Parceiro Frequente</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">🔄</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-posicao">-</div>
+                                <div class="card-label">Posição Favorita</div>
+                            </div>
+                        </div>
+                    
+                        <div class="summary-card">
+                            <div class="card-icon">🥇</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-primeiro-gol">0</div>
+                                <div class="card-label">Primeiros Gols</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">⚽</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-hat-tricks">0</div>
+                                <div class="card-label">Hat-tricks</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">💪</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-clutch">0</div>
+                                <div class="card-label">Gols Decisivos</div>
+                            </div>
+                        </div>
+                    </div></section>
+
+            <!-- Filtros Gerais -->
+            <section class="general-filters">
+                <h3>📈 Rankings Gerais</h3>
+                <div class="period-selector">
+                    <select id="select-datas" class="date-select">
+                        <option value="">Selecione uma data</option>
+                    </select>
+                    <button id="btn-mes" class="period-btn">Esse mês</button>
+                    <button id="btn-ano" class="period-btn">Esse ano</button>
+                    <button id="btn-total" class="period-btn active">História</button>
+                </div>
+            </section>
+
+            <!-- Rankings -->
+            <section class="rankings-section">
+                <!-- Artilheiros -->
+                <div class="ranking-card">
+                    <h3>🥇 Artilheiros</h3>
+                    <div id="ranking-artilheiros" class="ranking-list">
+                        <div class="loading-ranking">⏳ Carregando...</div>
+                    </div>
+                </div>
+
+                <!-- Jogadores Mais Ativos -->
+                <div class="ranking-card">
+                    <h3>🏃‍♂️ Fominhas</h3>
+                    <div id="ranking-participacoes" class="ranking-list">
+                        <div class="loading-ranking">⏳ Carregando...</div>
+                    </div>
+                </div>
+
+                <!-- Aproveitamento -->
+                <div class="ranking-card">
+                    <h3>👑 Reis da Pelada</h3>
+                    <div id="ranking-eficiencia" class="ranking-list">
+                        <div class="loading-ranking">⏳ Carregando...</div>
+                    </div></section>
+
+            <!-- Histórico por Data -->
+            <!-- Histórico por Data removido, pois já existe resumo acima -->
+
+            <!-- Estatísticas Detalhadas removidas conforme solicitado -->
+        </div>
+    </main>
+
+    <!-- Footer Mobile -->
+    <footer class="footer-mobile">
+        <nav class="nav-mobile">
+            <a href="index.html" class="nav-item">
+                <span class="emoji">🏠</span>
+            </a>
+            <a href="estatisticas.html" class="nav-item active">
+                <span class="emoji">🏆</span>
+            </a>
+            <a href="resultados.html" class="nav-item">
+                <span class="emoji">📊</span>
+            </a>
+        </nav>
+    </footer>
+
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="database.js"></script>
+    <script src="estatisticas.js"></script>
+</body>
+</html>
+
+
+

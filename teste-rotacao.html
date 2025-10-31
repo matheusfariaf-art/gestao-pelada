@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Rotação - Pelada 3</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Teste de Rotação da Fila</h1>
+    
+    <div>
+        <button onclick="testarConexao()">🔗 Testar Conexão</button>
+        <button onclick="mostrarFilaAtual()">👀 Ver Fila Atual</button>
+        <button onclick="testarAtualizacaoPosicao()">🔄 Testar Atualização de Posição</button>
+        <button onclick="testarRotacaoTimeA()">🅰️ Testar Rotação Time A</button>
+        <button onclick="limparLog()">🧹 Limpar Log</button>
+    </div>
+    
+    <div id="log" class="log"></div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="database.js"></script>
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function limparLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        async function testarConexao() {
+            try {
+                log('🔗 Testando conexão com Supabase...');
+                const resultado = await Database.testarConectividade();
+                log(`✅ Teste de conectividade: ${JSON.stringify(resultado)}`);
+            } catch (error) {
+                log(`❌ Erro na conexão: ${error.message}`);
+            }
+        }
+
+        async function mostrarFilaAtual() {
+            try {
+                log('👀 Buscando fila atual...');
+                const sessao = await Database.obterSessaoAtiva();
+                if (!sessao) {
+                    log('❌ Nenhuma sessão ativa encontrada');
+                    return;
+                }
+                
+                log(`✅ Sessão ativa: ${sessao.id}`);
+                
+                const fila = await Database.obterFila();
+                log(`📋 Fila atual (${fila.length} jogadores):`);
+                
+                fila.forEach((jogador, index) => {
+                    log(`  ${index + 1}. ID: ${jogador.jogador_id} | Nome: ${jogador.nome || jogador.jogador?.nome || 'N/A'} | Pos.Banco: ${jogador.posicao_fila}`);
+                });
+                
+            } catch (error) {
+                log(`❌ Erro ao buscar fila: ${error.message}`);
+            }
+        }
+
+        async function testarAtualizacaoPosicao() {
+            try {
+                log('🔄 Testando atualização de posição...');
+                
+                const fila = await Database.obterFila();
+                if (fila.length === 0) {
+                    log('❌ Fila vazia');
+                    return;
+                }
+                
+                // Pegar o primeiro jogador e tentar mudar sua posição
+                const primeiroJogador = fila[0];
+                const posicaoOriginal = primeiroJogador.posicao_fila;
+                const novaPosicao = posicaoOriginal === 1 ? 2 : 1;
+                
+                log(`🎯 Testando: Jogador ${primeiroJogador.jogador_id} da posição ${posicaoOriginal} para ${novaPosicao}`);
+                
+                // Função está no escopo do database.js
+                const resultado = await atualizarPosicaoFila(primeiroJogador.jogador_id, novaPosicao);
+                
+                if (resultado) {
+                    log('✅ Atualização bem-sucedida!');
+                    
+                    // Verificar se realmente mudou
+                    setTimeout(async () => {
+                        const filaAtualizada = await Database.obterFila();
+                        const jogadorAtualizado = filaAtualizada.find(j => j.jogador_id === primeiroJogador.jogador_id);
+                        log(`🔍 Verificação: Jogador agora está na posição ${jogadorAtualizado?.posicao_fila}`);
+                    }, 1000);
+                } else {
+                    log('❌ Falha na atualização');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro no teste: ${error.message}`);
+            }
+        }
+
+        async function testarRotacaoTimeA() {
+            try {
+                log('🅰️ Testando rotação do Time A...');
+                const resultado = await Database.rotacionarApenasTimeA();
+                
+                if (resultado) {
+                    log('✅ Rotação do Time A executada com sucesso!');
+                    
+                    // Mostrar fila após rotação
+                    setTimeout(mostrarFilaAtual, 1000);
+                } else {
+                    log('❌ Falha na rotação do Time A');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro na rotação: ${error.message}`);
+            }
+        }
+
+        // Auto-executar teste de conexão
+        window.onload = () => {
+            log('🚀 Teste de rotação carregado');
+            testarConexao();
+        };
+    </script>
+</body>
+</html>

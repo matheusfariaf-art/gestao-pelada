@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Teste Login - Pelada 3</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .login-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 300px;
+        }
+        h2 { text-align: center; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { width: 100%; padding: 12px; background: #2d8f2d; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .error { color: red; margin-top: 10px; }
+        .success { color: green; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>⚽ Login Pelada 3</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Usuário:</label>
+                <input type="text" id="username" value="admin" required>
+            </div>
+            <div class="form-group">
+                <label>Senha:</label>
+                <input type="password" id="password" value="4231" required>
+            </div>
+            <button type="submit">Entrar</button>
+        </form>
+        <div id="message"></div>
+        
+        <hr style="margin: 20px 0;">
+        <button onclick="testConnection()">🔗 Testar Conexão</button>
+        <button onclick="goToIndex()">🏠 Ir para Index</button>
+    </div>
+
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="database.js"></script>
+    
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+            
+            // Login simples
+            if (username === 'admin' && password === '4231') {
+                const user = {
+                    id: 'admin-temp',
+                    nome: 'Administrador',
+                    username: 'admin',
+                    role: 'admin',
+                    ativo: true
+                };
+                
+                localStorage.setItem('pelada3_user', JSON.stringify(user));
+                messageDiv.innerHTML = '<div class="success">✅ Login realizado! Redirecionando...</div>';
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+                
+            } else {
+                messageDiv.innerHTML = '<div class="error">❌ Usuário ou senha incorretos</div>';
+            }
+        });
+        
+        function testConnection() {
+            const messageDiv = document.getElementById('message');
+            
+            if (typeof supabase === 'undefined') {
+                messageDiv.innerHTML = '<div class="error">❌ Supabase não carregado</div>';
+                return;
+            }
+            
+            if (typeof client === 'undefined') {
+                messageDiv.innerHTML = '<div class="error">❌ Client não disponível</div>';
+                return;
+            }
+            
+            // Testar uma consulta simples
+            client.from('jogadores').select('count').then(result => {
+                if (result.error) {
+                    messageDiv.innerHTML = '<div class="error">❌ Erro na conexão: ' + result.error.message + '</div>';
+                } else {
+                    messageDiv.innerHTML = '<div class="success">✅ Conexão OK! Database funcionando.</div>';
+                }
+            });
+        }
+        
+        function goToIndex() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

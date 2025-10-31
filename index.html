@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pelada 3 - Home</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <img src="logo.jpeg" alt="Logo" class="logo">
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Gestão da Pelada -->
+            <section class="management-section">
+                <h3 class="management-title">⚽ Gestão da Pelada ⚽</h3>
+                <div class="management-buttons">
+                    <button class="management-btn" onclick="irPara('cadastro.html')">
+                        <span class="emoji">🏃‍♂️</span>
+                        <div class="btn-content">
+                            <strong>Peladeiros</strong>
+                            <small>Cadastrar jogadores</small>
+                        </div>
+                    </button>
+                    <button class="management-btn" onclick="irPara('sorteio.html')">
+                        <span class="emoji">🎲</span>
+                        <div class="btn-content">
+                            <strong>Sorteio</strong>
+                            <small>Montar times</small>
+                        </div>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Resultados -->
+            <section class="results-section">
+                <button class="results-btn" onclick="irPara('resultados.html')">
+                    <span class="emoji">📈</span>
+                    <span class="btn-text">Resultados</span>
+                    <span class="emoji">📈</span>
+                </button>
+            </section>
+
+            <!-- Seção Organizador (apenas para organizadores e admins) -->
+            <section class="organizer-section organizer-only" style="display: none;">
+                <h3 class="organizer-title">📋 Painel do Organizador</h3>
+                <div class="organizer-buttons">
+                    <button class="organizer-btn" onclick="irPara('sumula.html')">
+                        <span class="emoji">📝</span>
+                        <div class="btn-content">
+                            <strong>Súmula</strong>
+                            <small>Registrar resultados</small>
+                        </div>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Seção Admin (apenas para administradores) -->
+            <section class="admin-section admin-only" style="display: none;">
+                <h3 class="admin-title">🔧 Painel do Administrador</h3>
+                <div class="admin-buttons">
+                    <button class="admin-btn" onclick="irPara('usuarios.html')">
+                        <span class="emoji">👥</span>
+                        <div class="btn-content">
+                            <strong>Gerenciar Usuários</strong>
+                            <small>Adicionar, editar e controlar acessos</small>
+                        </div>
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Arquivo de configuração do banco -->
+    <script src="database.js"></script>
+    <!-- Proteção de autenticação -->
+    <script src="auth-protection.js"></script>
+    <!-- Script da página -->
+    <script src="index.js"></script>
+</body>
+</html>

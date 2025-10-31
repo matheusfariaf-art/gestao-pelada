@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Resultados - Pelada 3</title>
+    <link rel="stylesheet" href="resultados.css">
+</head>
+<body>
+    <main class="main">
+        <div class="container">
+            <!-- Header -->
+            <section class="header-card">
+                <h2>🏆 Histórico de Resultados 🏆</h2>
+                <div class="filter-selector">
+                    <button id="btn-hoje" class="filter-btn active">Hoje</button>
+                    <select id="select-datas" class="date-select">
+                        <option value="">Selecione uma data</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Resumo dos Resultados -->
+            <section class="summary-cards">
+                <div class="summary-card summary-card-button" id="btn-partidas">
+                    <div class="card-icon">⚽</div>
+                    <div class="card-content">
+                        <div class="card-number" id="total-partidas">0</div>
+                        <div class="card-label">Partidas</div>
+                    </div>
+                </div>
+                <div class="summary-card summary-card-button" id="btn-gols">
+                    <div class="card-icon">🥅</div>
+                    <div class="card-content">
+                        <div class="card-number" id="total-gols">0</div>
+                        <div class="card-label">Gols</div>
+                    </div>
+                </div>
+                <div class="summary-card summary-card-button" id="btn-jogadores">
+                    <div class="card-icon">👥</div>
+                    <div class="card-content">
+                        <div class="card-number" id="total-jogadores">0</div>
+                        <div class="card-label">Jogadores</div>
+                    </div>
+                </div>
+                <div class="summary-card summary-card-button" id="btn-estatisticas">
+                    <div class="card-icon">🏆</div>
+                    <div class="card-content">
+                        <div class="card-label">Estatísticas</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading -->
+            <div id="loading" class="loading-card">
+                <div class="loading-icon">⏳</div>
+                <div class="loading-text">Carregando resultados...</div>
+            </div>
+
+            <!-- Lista de Partidas -->
+            <section id="partidas-section" class="partidas-section">
+                <!-- As partidas serão inseridas aqui via JavaScript -->
+            </section>
+
+            <!-- Estado Vazio -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <div class="empty-icon">🏟️</div>
+                <h3>Nenhuma partida encontrada</h3>
+                <p>Não há partidas finalizadas no período selecionado.</p>
+            </div>
+
+            <!-- Modal Jogadores -->
+            <div id="modal-jogadores" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>👥 Jogadores do Período</h3>
+                        <button class="modal-close" onclick="fecharModal('modal-jogadores')">&times;</button>
+                    </div>
+                    <div class="modal-body" id="lista-jogadores">
+                        <!-- Lista será preenchida via JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Gols -->
+            <div id="modal-gols" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🥅 Gols do Período</h3>
+                        <button class="modal-close" onclick="fecharModal('modal-gols')">&times;</button>
+                    </div>
+                    <div class="modal-body" id="lista-gols">
+                        <!-- Lista será preenchida via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Mobile -->
+    <footer class="footer-mobile">
+        <nav class="nav-mobile">
+            <a href="index.html" class="nav-item">
+                <span class="emoji">🏠</span>
+            </a>
+            <a href="fila.html" class="nav-item">
+                <span class="emoji">📋</span>
+            </a>
+            <a href="resultados.html" class="nav-item active">
+                <span class="emoji">📊</span>
+            </a>
+        </nav>
+    </footer>
+
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="database.js"></script>
+    <script src="resultados.js"></script>
+</body>
+</html>
