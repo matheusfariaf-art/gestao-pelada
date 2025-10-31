@@ -270,6 +270,10 @@ body {
     gap: 16px;
     margin-bottom: 24px;
     align-items: start;
+    justify-content: center;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Centralizar quando há número ímpar de times */

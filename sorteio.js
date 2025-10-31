@@ -296,7 +296,10 @@ function sortearTimes() {
         }));
         
         // Executar sorteio inteligente com padrões
-        executarSorteioInteligente(jogadoresPorNivel, timesFormados, jogadoresPorTime);
+        // executarSorteioInteligente(jogadoresPorNivel, timesFormados, jogadoresPorTime);
+        
+        // NOVA VERSÃO: Sorteio individual por time com aleatoriedade
+        executarSorteioInteligenteIndividual(jogadoresPorNivel, timesFormados, jogadoresPorTime);
         
         // Calcular nível médio de cada time
         timesFormados.forEach(time => {
@@ -377,7 +380,7 @@ function executarSorteioInteligente(jogadoresPorNivel, times, jogadoresPorTime) 
     
     // Verificar padrões em ordem de prioridade
     if (verificarPadrao1(count, numeroTimes)) {
-        console.log('✅ Aplicando Padrão 1: 1×5⭐ + 1×4⭐ + 2×3⭐ + 2×(1-2⭐)');
+        console.log('✅ Aplicando Padrão 1: 1×5⭐ + 2×4⭐ + 2×3⭐ + 1×(1-2⭐)');
         mostrarMensagem('🥇 Padrão 1: Mix equilibrado ideal', 'success');
         aplicarPadrao1(jogadoresPorNivel, times, jogadoresPorTime);
     }
@@ -419,7 +422,7 @@ function executarSorteioInteligente(jogadoresPorNivel, times, jogadoresPorTime) 
     }
 }
 
-// Verificar se Padrão 1 é possível: 1×5⭐ + 1×4⭐ + 2×3⭐ + 2×(1-2⭐)
+// Verificar se Padrão 1 é possível: 1×5⭐ + 2×4⭐ + 2×3⭐ + 1×(1-2⭐)
 function verificarPadrao1(count, numeroTimes) {
     const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
     const timesParaTentar = Math.min(numeroTimes, timesCompletos);
@@ -428,9 +431,9 @@ function verificarPadrao1(count, numeroTimes) {
     
     const necessario = {
         5: timesParaTentar * 1,
-        4: timesParaTentar * 1,
+        4: timesParaTentar * 2,
         3: timesParaTentar * 2,
-        baixo: timesParaTentar * 2
+        baixo: timesParaTentar * 1
     };
     
     const disponivel = {
@@ -628,10 +631,10 @@ function verificarPadrao7(count, numeroTimes) {
     return possivel;
 }
 
-// Aplicar Padrão 1: 1×5⭐ + 1×4⭐ + 2×3⭐ + 2×(1-2⭐)
+// Aplicar Padrão 1: 1×5⭐ + 2×4⭐ + 2×3⭐ + 1×(1-2⭐)
 function aplicarPadrao1(jogadoresPorNivel, times, jogadoresPorTime) {
     console.log('=== APLICANDO PADRÃO 1 ===');
-    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 1, 4: 1, 3: 2, baixo: 2});
+    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 1, 4: 2, 3: 2, baixo: 1});
 }
 
 // Aplicar Padrão 2: 1×5⭐ + 3×4⭐ + 2×(1-2⭐)
@@ -1387,5 +1390,196 @@ async function solicitarSenhaIniciarPelada() {
                 resolve(false);
             }
         });
+    });
+}
+
+// ========================================
+// NOVAS FUNÇÕES PARA SORTEIO INDIVIDUAL
+// ========================================
+
+// Verificar padrões individualmente para um time
+function podeAplicarPadrao1Individual(count) {
+    return count[5] >= 1 && count[4] >= 2 && count[3] >= 2 && (count[1] + count[2]) >= 1;
+}
+
+function podeAplicarPadrao2Individual(count) {
+    return count[5] >= 1 && count[4] >= 3 && (count[1] + count[2]) >= 2;
+}
+
+function podeAplicarPadrao3Individual(count) {
+    return count[5] >= 1 && count[4] >= 1 && count[3] >= 3 && (count[1] + count[2]) >= 1;
+}
+
+function podeAplicarPadrao4Individual(count) {
+    return count[4] >= 3 && count[3] >= 2 && (count[1] + count[2]) >= 1;
+}
+
+function podeAplicarPadrao5Individual(count) {
+    return count[5] >= 1 && count[4] >= 2 && count[3] >= 1 && (count[1] + count[2]) >= 2;
+}
+
+function podeAplicarPadrao6Individual(count) {
+    return count[4] >= 1 && count[3] >= 5;
+}
+
+function podeAplicarPadrao7Individual(count) {
+    return count[5] >= 1 && count[3] >= 4 && (count[1] + count[2]) >= 1;
+}
+
+// Aplicar padrão individual para um time específico
+function aplicarPadraoIndividual(jogadoresPorNivel, time, padrao) {
+    console.log(`Aplicando padrão individual: 5⭐=${padrao[5]}, 4⭐=${padrao[4]}, 3⭐=${padrao[3]}, baixo=${padrao.baixo}`);
+    
+    // Aplicar 5 estrelas
+    for (let i = 0; i < padrao[5] && jogadoresPorNivel[5].length > 0; i++) {
+        const jogador = jogadoresPorNivel[5].shift();
+        time.jogadores.push(jogador);
+        console.log(`  + ${jogador.nome} (5⭐)`);
+    }
+    
+    // Aplicar 4 estrelas
+    for (let i = 0; i < padrao[4] && jogadoresPorNivel[4].length > 0; i++) {
+        const jogador = jogadoresPorNivel[4].shift();
+        time.jogadores.push(jogador);
+        console.log(`  + ${jogador.nome} (4⭐)`);
+    }
+    
+    // Aplicar 3 estrelas
+    for (let i = 0; i < padrao[3] && jogadoresPorNivel[3].length > 0; i++) {
+        const jogador = jogadoresPorNivel[3].shift();
+        time.jogadores.push(jogador);
+        console.log(`  + ${jogador.nome} (3⭐)`);
+    }
+    
+    // Aplicar jogadores baixos (2 ou 1 estrelas)
+    for (let i = 0; i < padrao.baixo; i++) {
+        if (jogadoresPorNivel[2].length > 0) {
+            const jogador = jogadoresPorNivel[2].shift();
+            time.jogadores.push(jogador);
+            console.log(`  + ${jogador.nome} (2⭐)`);
+        } else if (jogadoresPorNivel[1].length > 0) {
+            const jogador = jogadoresPorNivel[1].shift();
+            time.jogadores.push(jogador);
+            console.log(`  + ${jogador.nome} (1⭐)`);
+        }
+    }
+}
+
+// Preencher time com jogadores restantes (fallback individual)
+function preencherTimeComRestantes(jogadoresPorNivel, time, jogadoresPorTime) {
+    console.log(`Preenchendo ${time.nome} com jogadores restantes...`);
+    
+    // Preencher até atingir o número de jogadores por time
+    const niveis = [5, 4, 3, 2, 1];
+    let nivelAtual = 0;
+    
+    while (time.jogadores.length < jogadoresPorTime && nivelAtual < niveis.length) {
+        const nivel = niveis[nivelAtual];
+        
+        if (jogadoresPorNivel[nivel].length > 0) {
+            const jogador = jogadoresPorNivel[nivel].shift();
+            time.jogadores.push(jogador);
+            console.log(`  + ${jogador.nome} (${nivel}⭐) [RESTANTE]`);
+        } else {
+            nivelAtual++;
+        }
+    }
+    
+    console.log(`${time.nome} preenchido com ${time.jogadores.length} jogadores`);
+}
+
+// NOVA FUNÇÃO: Sorteio inteligente individual por time
+function executarSorteioInteligenteIndividual(jogadoresPorNivel, times, jogadoresPorTime) {
+    const numeroTimes = times.length;
+    
+    console.log('=== SORTEIO INDIVIDUAL POR TIME COM ALEATORIEDADE ===');
+    console.log(`Formando ${numeroTimes} times com ${jogadoresPorTime} jogadores cada`);
+    
+    // 🎲 ALEATORIEDADE: Embaralhar todos os níveis antes de começar
+    console.log('🎲 Embaralhando jogadores para garantir aleatoriedade...');
+    Object.keys(jogadoresPorNivel).forEach(nivel => {
+        jogadoresPorNivel[nivel] = embaralharArray(jogadoresPorNivel[nivel]);
+        console.log(`Nível ${nivel}⭐: ${jogadoresPorNivel[nivel].length} jogadores embaralhados`);
+    });
+    
+    // 🏆 APLICAR PADRÕES INDIVIDUAIS PARA CADA TIME
+    for (let i = 0; i < numeroTimes; i++) {
+        const time = times[i];
+        console.log(`\n=== MONTANDO ${time.nome} ===`);
+        
+        // Contar jogadores restantes
+        const countAtual = {
+            5: jogadoresPorNivel[5].length,
+            4: jogadoresPorNivel[4].length,
+            3: jogadoresPorNivel[3].length,
+            2: jogadoresPorNivel[2].length,
+            1: jogadoresPorNivel[1].length
+        };
+        
+        console.log(`Restantes: 5⭐=${countAtual[5]}, 4⭐=${countAtual[4]}, 3⭐=${countAtual[3]}, 2⭐=${countAtual[2]}, 1⭐=${countAtual[1]}`);
+        
+        // Tentar padrões em ordem de prioridade
+        let padraoAplicado = false;
+        
+        if (!padraoAplicado && podeAplicarPadrao1Individual(countAtual)) {
+            console.log(`✅ Padrão 1 no ${time.nome}: 1×5⭐ + 2×4⭐ + 2×3⭐ + 1×baixo`);
+            aplicarPadraoIndividual(jogadoresPorNivel, time, {5: 1, 4: 2, 3: 2, baixo: 1});
+            mostrarMensagem(`🥇 ${time.nome}: Padrão 1 (21+ pontos)`, 'success');
+            padraoAplicado = true;
+        }
+        else if (!padraoAplicado && podeAplicarPadrao2Individual(countAtual)) {
+            console.log(`✅ Padrão 2 no ${time.nome}: 1×5⭐ + 3×4⭐ + 2×baixo`);
+            aplicarPadraoIndividual(jogadoresPorNivel, time, {5: 1, 4: 3, 3: 0, baixo: 2});
+            mostrarMensagem(`🥈 ${time.nome}: Padrão 2 (19+ pontos)`, 'success');
+            padraoAplicado = true;
+        }
+        else if (!padraoAplicado && podeAplicarPadrao3Individual(countAtual)) {
+            console.log(`✅ Padrão 3 no ${time.nome}: 1×5⭐ + 1×4⭐ + 3×3⭐ + 1×baixo`);
+            aplicarPadraoIndividual(jogadoresPorNivel, time, {5: 1, 4: 1, 3: 3, baixo: 1});
+            mostrarMensagem(`🥉 ${time.nome}: Padrão 3 (~18 pontos)`, 'warning');
+            padraoAplicado = true;
+        }
+        else if (!padraoAplicado && podeAplicarPadrao4Individual(countAtual)) {
+            console.log(`✅ Padrão 4 no ${time.nome}: 3×4⭐ + 2×3⭐ + 1×baixo`);
+            aplicarPadraoIndividual(jogadoresPorNivel, time, {5: 0, 4: 3, 3: 2, baixo: 1});
+            mostrarMensagem(`🏅 ${time.nome}: Padrão 4 (~17 pontos)`, 'warning');
+            padraoAplicado = true;
+        }
+        else if (!padraoAplicado && podeAplicarPadrao5Individual(countAtual)) {
+            console.log(`✅ Padrão 5 no ${time.nome}: 1×5⭐ + 2×4⭐ + 1×3⭐ + 2×baixo`);
+            aplicarPadraoIndividual(jogadoresPorNivel, time, {5: 1, 4: 2, 3: 1, baixo: 2});
+            mostrarMensagem(`⭐ ${time.nome}: Padrão 5 (~16 pontos)`, 'warning');
+            padraoAplicado = true;
+        }
+        else if (!padraoAplicado && podeAplicarPadrao6Individual(countAtual)) {
+            console.log(`✅ Padrão 6 no ${time.nome}: 1×4⭐ + 5×3⭐`);
+            aplicarPadraoIndividual(jogadoresPorNivel, time, {5: 0, 4: 1, 3: 5, baixo: 0});
+            mostrarMensagem(`🎯 ${time.nome}: Padrão 6 (19 pontos)`, 'info');
+            padraoAplicado = true;
+        }
+        else if (!padraoAplicado && podeAplicarPadrao7Individual(countAtual)) {
+            console.log(`✅ Padrão 7 no ${time.nome}: 1×5⭐ + 4×3⭐ + 1×baixo`);
+            aplicarPadraoIndividual(jogadoresPorNivel, time, {5: 1, 4: 0, 3: 4, baixo: 1});
+            mostrarMensagem(`🌟 ${time.nome}: Padrão 7 (~18 pontos)`, 'info');
+            padraoAplicado = true;
+        }
+        
+        // Fallback individual
+        if (!padraoAplicado) {
+            console.log(`🔄 Fallback individual para ${time.nome}`);
+            preencherTimeComRestantes(jogadoresPorNivel, time, jogadoresPorTime);
+            mostrarMensagem(`🔄 ${time.nome}: Formação Livre`, 'info');
+        }
+    }
+    
+    // Log final
+    console.log('\n=== TIMES FINAIS ===');
+    times.forEach(time => {
+        if (time.jogadores.length > 0) {
+            const niveis = time.jogadores.map(j => j.nivel_habilidade || 3);
+            const soma = niveis.reduce((sum, n) => sum + n, 0);
+            const media = (soma / niveis.length).toFixed(1);
+            console.log(`${time.nome}: ${time.jogadores.length} jogadores - Total: ${soma} pts - Média: ${media}⭐`);
+        }
     });
 }
