@@ -42,6 +42,12 @@ function configurarEstadoInicial() {
     
     // Ocultar todas as estrelas por padrão
     document.querySelectorAll('.player-stars').forEach(stars => stars.classList.add('hidden'));
+    
+    // Inicializar contador do botão sortear
+    const sortearText = document.getElementById('sortear-text');
+    if (sortearText) {
+        sortearText.textContent = 'Sortear Times: 0';
+    }
 }
 
 // Event Listeners
@@ -216,6 +222,12 @@ function toggleStars() {
 function atualizarContadorSelecao() {
     const count = jogadoresSelecionados.length;
     selectedCount.textContent = `${count} jogador${count !== 1 ? 'es' : ''} selecionado${count !== 1 ? 's' : ''}`;
+    
+    // Atualizar texto do botão de sortear
+    const sortearText = document.getElementById('sortear-text');
+    if (sortearText) {
+        sortearText.textContent = `Sortear Times: ${count}`;
+    }
 }
 
 // Validar se pode sortear
@@ -360,20 +372,44 @@ function executarSorteioInteligente(jogadoresPorNivel, times, jogadoresPorTime) 
         touchSupport: 'ontouchstart' in window
     });
     
-    // APLICAR PADRÕES CONFORME REGRAS
+    // APLICAR PADRÕES CONFORME REGRAS (7 padrões + fallback)
     console.log('=== VERIFICANDO PADRÕES DE TIMES ===');
     
-    // Verificar se Padrão 1 é possível
+    // Verificar padrões em ordem de prioridade
     if (verificarPadrao1(count, numeroTimes)) {
-        console.log('✅ Aplicando Padrão 1: 1x5⭐ + 2x4⭐ + 2x3⭐ + 1x(1-2⭐)');
-        mostrarMensagem('🥇 Padrão 1: 1×5⭐ + 2×4⭐ + 2×3⭐ + 1×(1-2⭐)', 'success');
+        console.log('✅ Aplicando Padrão 1: 1×5⭐ + 1×4⭐ + 2×3⭐ + 2×(1-2⭐)');
+        mostrarMensagem('🥇 Padrão 1: Mix equilibrado ideal', 'success');
         aplicarPadrao1(jogadoresPorNivel, times, jogadoresPorTime);
     }
-    // Senão, verificar se Padrão 2 é possível  
     else if (verificarPadrao2(count, numeroTimes)) {
-        console.log('⚠️ Aplicando Padrão 2: 3x4⭐ + 2x3⭐ + 1x(1-2⭐)');
-        mostrarMensagem('🥈 Padrão 2: 3×4⭐ + 2×3⭐ + 1×(1-2⭐)', 'warning');
+        console.log('✅ Aplicando Padrão 2: 1×5⭐ + 3×4⭐ + 2×(1-2⭐)');
+        mostrarMensagem('� Padrão 2: Força nos 4 estrelas', 'success');
         aplicarPadrao2(jogadoresPorNivel, times, jogadoresPorTime);
+    }
+    else if (verificarPadrao3(count, numeroTimes)) {
+        console.log('✅ Aplicando Padrão 3: 1×5⭐ + 1×4⭐ + 3×3⭐ + 1×(1-2⭐)');
+        mostrarMensagem('🥉 Padrão 3: Base sólida em 3⭐', 'success');
+        aplicarPadrao3(jogadoresPorNivel, times, jogadoresPorTime);
+    }
+    else if (verificarPadrao4(count, numeroTimes)) {
+        console.log('✅ Aplicando Padrão 4: 3×4⭐ + 2×3⭐ + 1×(1-2⭐)');
+        mostrarMensagem('🏅 Padrão 4: Sem craques, foco 4⭐', 'warning');
+        aplicarPadrao4(jogadoresPorNivel, times, jogadoresPorTime);
+    }
+    else if (verificarPadrao5(count, numeroTimes)) {
+        console.log('✅ Aplicando Padrão 5: 1×5⭐ + 2×4⭐ + 1×3⭐ + 2×(1-2⭐)');
+        mostrarMensagem('⭐ Padrão 5: Mix variado', 'warning');
+        aplicarPadrao5(jogadoresPorNivel, times, jogadoresPorTime);
+    }
+    else if (verificarPadrao6(count, numeroTimes)) {
+        console.log('✅ Aplicando Padrão 6: 1×4⭐ + 5×3⭐');
+        mostrarMensagem('🎯 Padrão 6: Time médio consistente', 'warning');
+        aplicarPadrao6(jogadoresPorNivel, times, jogadoresPorTime);
+    }
+    else if (verificarPadrao7(count, numeroTimes)) {
+        console.log('✅ Aplicando Padrão 7: 1×5⭐ + 4×3⭐ + 1×(1-2⭐)');
+        mostrarMensagem('🌟 Padrão 7: Um craque + base sólida', 'warning');
+        aplicarPadrao7(jogadoresPorNivel, times, jogadoresPorTime);
     }
     // Fallback: sorteio equilibrado
     else {
@@ -383,20 +419,18 @@ function executarSorteioInteligente(jogadoresPorNivel, times, jogadoresPorTime) 
     }
 }
 
-// Verificar se Padrão 1 é possível
+// Verificar se Padrão 1 é possível: 1×5⭐ + 1×4⭐ + 2×3⭐ + 2×(1-2⭐)
 function verificarPadrao1(count, numeroTimes) {
-    // Calcular apenas para times COMPLETOS (6 jogadores)
     const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
     const timesParaTentar = Math.min(numeroTimes, timesCompletos);
     
-    console.log(`Verificando Padrão 1 para ${timesParaTentar} times completos (de ${numeroTimes} total)`);
-    console.log('Necessário por time: 1x5⭐ + 2x4⭐ + 2x3⭐ + 1x(1-2⭐)');
+    console.log(`Verificando Padrão 1 para ${timesParaTentar} times completos`);
     
     const necessario = {
         5: timesParaTentar * 1,
-        4: timesParaTentar * 2,
+        4: timesParaTentar * 1,
         3: timesParaTentar * 2,
-        baixo: timesParaTentar * 1
+        baixo: timesParaTentar * 2
     };
     
     const disponivel = {
@@ -406,8 +440,66 @@ function verificarPadrao1(count, numeroTimes) {
         baixo: count[1] + count[2]
     };
     
-    console.log('Necessário:', necessario);
-    console.log('Disponível:', disponivel);
+    const possivel = timesParaTentar > 0 && (
+        disponivel[5] >= necessario[5] &&
+        disponivel[4] >= necessario[4] &&
+        disponivel[3] >= necessario[3] &&
+        disponivel.baixo >= necessario.baixo
+    );
+    
+    console.log('Padrão 1 possível:', possivel);
+    return possivel;
+}
+
+// Verificar se Padrão 2 é possível: 1×5⭐ + 3×4⭐ + 2×(1-2⭐)
+function verificarPadrao2(count, numeroTimes) {
+    const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
+    const timesParaTentar = Math.min(numeroTimes, timesCompletos);
+    
+    console.log(`Verificando Padrão 2 para ${timesParaTentar} times completos`);
+    
+    const necessario = {
+        5: timesParaTentar * 1,
+        4: timesParaTentar * 3,
+        baixo: timesParaTentar * 2
+    };
+    
+    const disponivel = {
+        5: count[5],
+        4: count[4],
+        baixo: count[1] + count[2]
+    };
+    
+    const possivel = timesParaTentar > 0 && (
+        disponivel[5] >= necessario[5] &&
+        disponivel[4] >= necessario[4] &&
+        disponivel.baixo >= necessario.baixo
+    );
+    
+    console.log('Padrão 2 possível:', possivel);
+    return possivel;
+}
+
+// Verificar se Padrão 3 é possível: 1×5⭐ + 1×4⭐ + 3×3⭐ + 1×(1-2⭐)
+function verificarPadrao3(count, numeroTimes) {
+    const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
+    const timesParaTentar = Math.min(numeroTimes, timesCompletos);
+    
+    console.log(`Verificando Padrão 3 para ${timesParaTentar} times completos`);
+    
+    const necessario = {
+        5: timesParaTentar * 1,
+        4: timesParaTentar * 1,
+        3: timesParaTentar * 3,
+        baixo: timesParaTentar * 1
+    };
+    
+    const disponivel = {
+        5: count[5],
+        4: count[4],
+        3: count[3],
+        baixo: count[1] + count[2]
+    };
     
     const possivel = timesParaTentar > 0 && (
         disponivel[5] >= necessario[5] &&
@@ -416,18 +508,16 @@ function verificarPadrao1(count, numeroTimes) {
         disponivel.baixo >= necessario.baixo
     );
     
-    console.log('Padrão 1 possível:', possivel, `(para ${timesParaTentar} times)`);
+    console.log('Padrão 3 possível:', possivel);
     return possivel;
 }
 
-// Verificar se Padrão 2 é possível
-function verificarPadrao2(count, numeroTimes) {
-    // Calcular apenas para times COMPLETOS (6 jogadores)
+// Verificar se Padrão 4 é possível: 3×4⭐ + 2×3⭐ + 1×(1-2⭐)
+function verificarPadrao4(count, numeroTimes) {
     const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
     const timesParaTentar = Math.min(numeroTimes, timesCompletos);
     
-    console.log(`Verificando Padrão 2 para ${timesParaTentar} times completos (de ${numeroTimes} total)`);
-    console.log('Necessário por time: 3x4⭐ + 2x3⭐ + 1x(1-2⭐)');
+    console.log(`Verificando Padrão 4 para ${timesParaTentar} times completos`);
     
     const necessario = {
         4: timesParaTentar * 3,
@@ -441,24 +531,147 @@ function verificarPadrao2(count, numeroTimes) {
         baixo: count[1] + count[2]
     };
     
-    console.log('Necessário:', necessario);
-    console.log('Disponível:', disponivel);
-    
     const possivel = timesParaTentar > 0 && (
         disponivel[4] >= necessario[4] &&
         disponivel[3] >= necessario[3] &&
         disponivel.baixo >= necessario.baixo
     );
     
-    console.log('Padrão 2 possível:', possivel, `(para ${timesParaTentar} times)`);
+    console.log('Padrão 4 possível:', possivel);
     return possivel;
 }
 
-// Aplicar Padrão 1: 1x5⭐ + 2x4⭐ + 2x3⭐ + 1x(1-2⭐)
+// Verificar se Padrão 5 é possível: 1×5⭐ + 2×4⭐ + 1×3⭐ + 2×(1-2⭐)
+function verificarPadrao5(count, numeroTimes) {
+    const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
+    const timesParaTentar = Math.min(numeroTimes, timesCompletos);
+    
+    console.log(`Verificando Padrão 5 para ${timesParaTentar} times completos`);
+    
+    const necessario = {
+        5: timesParaTentar * 1,
+        4: timesParaTentar * 2,
+        3: timesParaTentar * 1,
+        baixo: timesParaTentar * 2
+    };
+    
+    const disponivel = {
+        5: count[5],
+        4: count[4],
+        3: count[3],
+        baixo: count[1] + count[2]
+    };
+    
+    const possivel = timesParaTentar > 0 && (
+        disponivel[5] >= necessario[5] &&
+        disponivel[4] >= necessario[4] &&
+        disponivel[3] >= necessario[3] &&
+        disponivel.baixo >= necessario.baixo
+    );
+    
+    console.log('Padrão 5 possível:', possivel);
+    return possivel;
+}
+
+// Verificar se Padrão 6 é possível: 1×4⭐ + 5×3⭐
+function verificarPadrao6(count, numeroTimes) {
+    const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
+    const timesParaTentar = Math.min(numeroTimes, timesCompletos);
+    
+    console.log(`Verificando Padrão 6 para ${timesParaTentar} times completos`);
+    
+    const necessario = {
+        4: timesParaTentar * 1,
+        3: timesParaTentar * 5
+    };
+    
+    const disponivel = {
+        4: count[4],
+        3: count[3]
+    };
+    
+    const possivel = timesParaTentar > 0 && (
+        disponivel[4] >= necessario[4] &&
+        disponivel[3] >= necessario[3]
+    );
+    
+    console.log('Padrão 6 possível:', possivel);
+    return possivel;
+}
+
+// Verificar se Padrão 7 é possível: 1×5⭐ + 4×3⭐ + 1×(1-2⭐)
+function verificarPadrao7(count, numeroTimes) {
+    const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
+    const timesParaTentar = Math.min(numeroTimes, timesCompletos);
+    
+    console.log(`Verificando Padrão 7 para ${timesParaTentar} times completos`);
+    
+    const necessario = {
+        5: timesParaTentar * 1,
+        3: timesParaTentar * 4,
+        baixo: timesParaTentar * 1
+    };
+    
+    const disponivel = {
+        5: count[5],
+        3: count[3],
+        baixo: count[1] + count[2]
+    };
+    
+    const possivel = timesParaTentar > 0 && (
+        disponivel[5] >= necessario[5] &&
+        disponivel[3] >= necessario[3] &&
+        disponivel.baixo >= necessario.baixo
+    );
+    
+    console.log('Padrão 7 possível:', possivel);
+    return possivel;
+}
+
+// Aplicar Padrão 1: 1×5⭐ + 1×4⭐ + 2×3⭐ + 2×(1-2⭐)
 function aplicarPadrao1(jogadoresPorNivel, times, jogadoresPorTime) {
     console.log('=== APLICANDO PADRÃO 1 ===');
-    
-    // Aplicar padrão apenas nos times que podem ser completos (6 jogadores)
+    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 1, 4: 1, 3: 2, baixo: 2});
+}
+
+// Aplicar Padrão 2: 1×5⭐ + 3×4⭐ + 2×(1-2⭐)
+function aplicarPadrao2(jogadoresPorNivel, times, jogadoresPorTime) {
+    console.log('=== APLICANDO PADRÃO 2 ===');
+    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 1, 4: 3, 3: 0, baixo: 2});
+}
+
+// Aplicar Padrão 3: 1×5⭐ + 1×4⭐ + 3×3⭐ + 1×(1-2⭐)
+function aplicarPadrao3(jogadoresPorNivel, times, jogadoresPorTime) {
+    console.log('=== APLICANDO PADRÃO 3 ===');
+    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 1, 4: 1, 3: 3, baixo: 1});
+}
+
+// Aplicar Padrão 4: 3×4⭐ + 2×3⭐ + 1×(1-2⭐)
+function aplicarPadrao4(jogadoresPorNivel, times, jogadoresPorTime) {
+    console.log('=== APLICANDO PADRÃO 4 ===');
+    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 0, 4: 3, 3: 2, baixo: 1});
+}
+
+// Aplicar Padrão 5: 1×5⭐ + 2×4⭐ + 1×3⭐ + 2×(1-2⭐)
+function aplicarPadrao5(jogadoresPorNivel, times, jogadoresPorTime) {
+    console.log('=== APLICANDO PADRÃO 5 ===');
+    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 1, 4: 2, 3: 1, baixo: 2});
+}
+
+// Aplicar Padrão 6: 1×4⭐ + 5×3⭐
+function aplicarPadrao6(jogadoresPorNivel, times, jogadoresPorTime) {
+    console.log('=== APLICANDO PADRÃO 6 ===');
+    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 0, 4: 1, 3: 5, baixo: 0});
+}
+
+// Aplicar Padrão 7: 1×5⭐ + 4×3⭐ + 1×(1-2⭐)
+function aplicarPadrao7(jogadoresPorNivel, times, jogadoresPorTime) {
+    console.log('=== APLICANDO PADRÃO 7 ===');
+    aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, {5: 1, 4: 0, 3: 4, baixo: 1});
+}
+
+// Função genérica para aplicar qualquer padrão
+function aplicarPadraoGenerico(jogadoresPorNivel, times, jogadoresPorTime, padrao) {
     const totalJogadores = Object.values(jogadoresPorNivel).reduce((sum, arr) => sum + arr.length, 0);
     const timesCompletos = Math.min(times.length, Math.floor(totalJogadores / 6));
     
@@ -466,91 +679,46 @@ function aplicarPadrao1(jogadoresPorNivel, times, jogadoresPorTime) {
     
     for (let i = 0; i < timesCompletos; i++) {
         const time = times[i];
-        console.log(`Montando ${time.nome} (completo):`);
+        console.log(`Montando ${time.nome}:`);
         
-        // 1 jogador 5 estrelas
-        if (jogadoresPorNivel[5].length > 0) {
+        // Aplicar 5 estrelas
+        for (let j = 0; j < padrao[5] && jogadoresPorNivel[5].length > 0; j++) {
             const jogador = jogadoresPorNivel[5].shift();
             time.jogadores.push(jogador);
             console.log(`  + ${jogador.nome} (5⭐)`);
         }
         
-        // 2 jogadores 4 estrelas
-        for (let j = 0; j < 2 && jogadoresPorNivel[4].length > 0; j++) {
+        // Aplicar 4 estrelas
+        for (let j = 0; j < padrao[4] && jogadoresPorNivel[4].length > 0; j++) {
             const jogador = jogadoresPorNivel[4].shift();
             time.jogadores.push(jogador);
             console.log(`  + ${jogador.nome} (4⭐)`);
         }
         
-        // 2 jogadores 3 estrelas
-        for (let j = 0; j < 2 && jogadoresPorNivel[3].length > 0; j++) {
+        // Aplicar 3 estrelas
+        for (let j = 0; j < padrao[3] && jogadoresPorNivel[3].length > 0; j++) {
             const jogador = jogadoresPorNivel[3].shift();
             time.jogadores.push(jogador);
             console.log(`  + ${jogador.nome} (3⭐)`);
         }
         
-        // 1 jogador 1-2 estrelas
-        if (jogadoresPorNivel[2].length > 0) {
-            const jogador = jogadoresPorNivel[2].shift();
-            time.jogadores.push(jogador);
-            console.log(`  + ${jogador.nome} (2⭐)`);
-        } else if (jogadoresPorNivel[1].length > 0) {
-            const jogador = jogadoresPorNivel[1].shift();
-            time.jogadores.push(jogador);
-            console.log(`  + ${jogador.nome} (1⭐)`);
+        // Aplicar jogadores baixos (2 ou 1 estrelas)
+        for (let j = 0; j < padrao.baixo; j++) {
+            if (jogadoresPorNivel[2].length > 0) {
+                const jogador = jogadoresPorNivel[2].shift();
+                time.jogadores.push(jogador);
+                console.log(`  + ${jogador.nome} (2⭐)`);
+            } else if (jogadoresPorNivel[1].length > 0) {
+                const jogador = jogadoresPorNivel[1].shift();
+                time.jogadores.push(jogador);
+                console.log(`  + ${jogador.nome} (1⭐)`);
+            }
         }
         
         console.log(`  Total: ${time.jogadores.length} jogadores`);
     }
     
-    // Distribuir jogadores restantes (incluindo times incompletos)
-    console.log('Distribuindo jogadores restantes...');
-    distribuirRestantes(jogadoresPorNivel, times, jogadoresPorTime);
-}
-
-// Aplicar Padrão 2: 3x4⭐ + 2x3⭐ + 1x(1-2⭐)
-function aplicarPadrao2(jogadoresPorNivel, times, jogadoresPorTime) {
-    console.log('=== APLICANDO PADRÃO 2 ===');
-    
-    // Aplicar padrão apenas nos times que podem ser completos (6 jogadores)
-    const totalJogadores = Object.values(jogadoresPorNivel).reduce((sum, arr) => sum + arr.length, 0);
-    const timesCompletos = Math.min(times.length, Math.floor(totalJogadores / 6));
-    
-    console.log(`Aplicando padrão em ${timesCompletos} times completos de ${times.length} total`);
-    
-    for (let i = 0; i < timesCompletos; i++) {
-        const time = times[i];
-        console.log(`Montando ${time.nome} (completo):`);
-        
-        // 3 jogadores 4 estrelas
-        for (let j = 0; j < 3 && jogadoresPorNivel[4].length > 0; j++) {
-            const jogador = jogadoresPorNivel[4].shift();
-            time.jogadores.push(jogador);
-            console.log(`  + ${jogador.nome} (4⭐)`);
-        }
-        
-        // 2 jogadores 3 estrelas
-        for (let j = 0; j < 2 && jogadoresPorNivel[3].length > 0; j++) {
-            const jogador = jogadoresPorNivel[3].shift();
-            time.jogadores.push(jogador);
-            console.log(`  + ${jogador.nome} (3⭐)`);
-        }
-        
-        // 1 jogador 1-2 estrelas
-        if (jogadoresPorNivel[2].length > 0) {
-            const jogador = jogadoresPorNivel[2].shift();
-            time.jogadores.push(jogador);
-            console.log(`  + ${jogador.nome} (2⭐)`);
-        } else if (jogadoresPorNivel[1].length > 0) {
-            const jogador = jogadoresPorNivel[1].shift();
-            time.jogadores.push(jogador);
-            console.log(`  + ${jogador.nome} (1⭐)`);
-        }
-        
-        console.log(`  Total: ${time.jogadores.length} jogadores`);
-    }
-    
-    // Distribuir jogadores restantes (incluindo times incompletos)
+    // Distribuir jogadores restantes
     console.log('Distribuindo jogadores restantes...');
     distribuirRestantes(jogadoresPorNivel, times, jogadoresPorTime);
 }
@@ -1101,16 +1269,60 @@ async function solicitarSenhaIniciarPelada() {
         const verificarSenha = async () => {
             const senhaDigitada = inputSenha.value.trim();
             
-            // Obter senha do usuário logado
-            const username = localStorage.getItem('userName');
-            if (!username) {
+            // Obter dados do usuário logado
+            const userData = localStorage.getItem('pelada3_user');
+            if (!userData) {
                 alert('Erro: Usuário não logado');
+                document.body.removeChild(modal);
+                resolve(false);
+                return;
+            }
+            
+            let currentUser;
+            try {
+                currentUser = JSON.parse(userData);
+            } catch (error) {
+                console.error('Erro ao ler dados do usuário:', error);
+                alert('Erro: Dados de usuário inválidos');
+                document.body.removeChild(modal);
+                resolve(false);
+                return;
+            }
+            
+            const username = currentUser.username;
+            if (!username) {
+                alert('Erro: Nome de usuário não encontrado');
                 document.body.removeChild(modal);
                 resolve(false);
                 return;
             }
 
             try {
+                // Para admin, verificar senha fixa
+                if (username === 'admin') {
+                    if (senhaDigitada === '4231') {
+                        document.body.removeChild(modal);
+                        resolve(true);
+                        return;
+                    } else {
+                        // Senha incorreta - mostrar erro
+                        inputSenha.style.borderColor = '#ff4444';
+                        inputSenha.style.backgroundColor = '#fff5f5';
+                        inputSenha.value = '';
+                        inputSenha.placeholder = '❌ Senha incorreta - Digite sua senha de usuário';
+                        inputSenha.focus();
+                        
+                        // Resetar estilo após 3 segundos
+                        setTimeout(() => {
+                            inputSenha.style.borderColor = '';
+                            inputSenha.style.backgroundColor = '';
+                            inputSenha.placeholder = 'Digite sua senha';
+                        }, 3000);
+                        return;
+                    }
+                }
+                
+                // Para outros usuários, verificar no banco
                 const { data, error } = await supabase
                     .from('usuarios')
                     .select('senha')

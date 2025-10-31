@@ -47,7 +47,7 @@ function configurarEventos() {
     
     // Botão de estatísticas
     btnEstatisticas.addEventListener('click', () => {
-        window.location.href = 'senha-estatisticas.html';
+        window.location.href = 'estatisticas.html';
     });
     
     // Botão de partidas

@@ -438,7 +438,11 @@ function updateSummaryCards(games, goals) {
 function updateRankings(games, goals) {
     updateArtilheiros(goals);
     updateMaisAtivos(games);
-    updateEficiencia(games, goals);
+    updateOsCarasDaVitoria(games); // Antigo Reis da Pelada - por vitórias
+    updateReisDaPelada(games, goals); // Novo Reis da Pelada - vitórias + gols
+    updateBolaMurcha(games); // Novo Bola Murcha - mais derrotas
+    updateMediaGols(games, goals); // Média de gols
+    updateParceirosIdeais(games); // Duplas que mais jogam juntas
 }
 
 // Ranking de artilheiros
@@ -461,10 +465,9 @@ function updateArtilheiros(goals) {
                 stats: `${gols} gol${gols > 1 ? 's' : ''}`
             };
         })
-        .sort((a, b) => b.valor - a.valor)
-           .slice(0, 3);
+        .sort((a, b) => b.valor - a.valor);
     
-    renderRanking('ranking-artilheiros', ranking);
+    renderRanking('ranking-artilheiros', ranking.slice(0, 3), ranking);
 }
 
 // Ranking de mais ativos
@@ -497,13 +500,13 @@ function updateMaisAtivos(games) {
                 stats: `${participacoes} jogo${participacoes > 1 ? 's' : ''}`
             };
         })
-        .sort((a, b) => b.valor - a.valor)
-        .slice(0, 3);
-    renderRanking('ranking-participacoes', ranking);
+        .sort((a, b) => b.valor - a.valor);
+    
+    renderRanking('ranking-participacoes', ranking.slice(0, 3), ranking);
 }
 
-// Ranking de eficiência (gols por partida)
-function updateEficiencia(games, goals) {
+// Ranking de eficiência (Os Caras da Vitória - antigo Reis da Pelada)
+function updateOsCarasDaVitoria(games) {
     // Top 3 jogadores com mais vitórias
     const vitoriasPorJogador = {};
     games.filter(g => g.status === 'finalizado').forEach(game => {
@@ -534,21 +537,292 @@ function updateEficiencia(games, goals) {
                 stats: `${vitorias} vitória${vitorias > 1 ? 's' : ''}`
             };
         })
-        .sort((a, b) => b.valor - a.valor)
-        .slice(0, 3);
-    renderRanking('ranking-eficiencia', ranking);
+        .sort((a, b) => b.valor - a.valor);
+    
+    renderRanking('ranking-eficiencia', ranking.slice(0, 3), ranking);
+}
+
+// Ranking Reis da Pelada (vitórias + gols)
+function updateReisDaPelada(games, goals) {
+    const scoresPorJogador = {};
+    
+    // Contar vitórias
+    games.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeVencedor = game.time_vencedor;
+        let time;
+        if (timeVencedor === 'A') {
+            time = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        } else if (timeVencedor === 'B') {
+            time = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        } else {
+            time = [];
+        }
+        if (Array.isArray(time)) {
+            time.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    if (!scoresPorJogador[jogadorId]) {
+                        scoresPorJogador[jogadorId] = { vitorias: 0, gols: 0 };
+                    }
+                    scoresPorJogador[jogadorId].vitorias++;
+                }
+            });
+        }
+    });
+    
+    // Contar gols - usar a mesma lógica dos artilheiros
+    goals.forEach(goal => {
+        if (goal.jogador_id) {
+            if (!scoresPorJogador[goal.jogador_id]) {
+                scoresPorJogador[goal.jogador_id] = { vitorias: 0, gols: 0 };
+            }
+            scoresPorJogador[goal.jogador_id].gols++;
+        }
+    });
+    
+    const ranking = Object.entries(scoresPorJogador)
+        .map(([jogadorId, stats]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            const scoreTotal = stats.vitorias + stats.gols;
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: scoreTotal,
+                stats: `${stats.vitorias} vitória${stats.vitorias !== 1 ? 's' : ''} + ${stats.gols} gol${stats.gols !== 1 ? 's' : ''} = ${scoreTotal} pontos`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+    
+    renderRanking('ranking-reis', ranking.slice(0, 3), ranking);
+}
+
+// Ranking Bola Murcha (mais derrotas)
+function updateBolaMurcha(games) {
+    const derrotasPorJogador = {};
+    const partidasPorJogador = {};
+    
+    games.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeVencedor = game.time_vencedor;
+        let timeA = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        let timeB = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        
+        // Contar partidas para todos os jogadores
+        if (Array.isArray(timeA)) {
+            timeA.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    partidasPorJogador[jogadorId] = (partidasPorJogador[jogadorId] || 0) + 1;
+                    derrotasPorJogador[jogadorId] = derrotasPorJogador[jogadorId] || 0;
+                    
+                    // Se time B venceu, jogadores do time A perderam
+                    if (timeVencedor === 'B') {
+                        derrotasPorJogador[jogadorId]++;
+                    }
+                }
+            });
+        }
+        
+        if (Array.isArray(timeB)) {
+            timeB.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    partidasPorJogador[jogadorId] = (partidasPorJogador[jogadorId] || 0) + 1;
+                    derrotasPorJogador[jogadorId] = derrotasPorJogador[jogadorId] || 0;
+                    
+                    // Se time A venceu, jogadores do time B perderam
+                    if (timeVencedor === 'A') {
+                        derrotasPorJogador[jogadorId]++;
+                    }
+                }
+            });
+        }
+    });
+    
+    const ranking = Object.entries(derrotasPorJogador)
+        .filter(([jogadorId, derrotas]) => partidasPorJogador[jogadorId] >= 3) // Apenas jogadores com 3+ partidas
+        .map(([jogadorId, derrotas]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            const partidas = partidasPorJogador[jogadorId];
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: derrotas,
+                stats: `${derrotas} derrota${derrotas !== 1 ? 's' : ''} em ${partidas} partida${partidas !== 1 ? 's' : ''}`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+    
+    renderRanking('ranking-derrotas', ranking.slice(0, 3), ranking);
+}
+
+// Ranking Clutch Players (primeiros gols)
+function updateClutchPlayers(goals) {
+    const clutchPorJogador = {};
+    
+    if (!goals || goals.length === 0) {
+        renderRanking('ranking-clutch', [], []);
+        return;
+    }
+    
+    // Contar apenas primeiros gols de cada partida (versão simplificada)
+    const partidasProcessadas = new Set();
+    
+    goals.forEach(gol => {
+        const partidaId = gol.partida_id;
+        const jogadorId = gol.jogador_id;
+        
+        // Se essa partida ainda não foi processada, contar este como primeiro gol
+        if (partidaId && jogadorId && !partidasProcessadas.has(partidaId)) {
+            clutchPorJogador[jogadorId] = (clutchPorJogador[jogadorId] || 0) + 1;
+            partidasProcessadas.add(partidaId);
+        }
+    });
+    
+    const ranking = Object.entries(clutchPorJogador)
+        .map(([jogadorId, golsClutch]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: golsClutch,
+                stats: `${golsClutch} primeiro${golsClutch !== 1 ? 's' : ''} gol${golsClutch !== 1 ? 's' : ''}`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+    
+    renderRanking('ranking-clutch', ranking.slice(0, 3), ranking);
+}
+
+// Ranking Média de Gols (mínimo 5 partidas)
+function updateMediaGols(games, goals) {
+    const golsPorJogador = {};
+    const partidasPorJogador = {};
+    
+    // Contar gols
+    goals.forEach(gol => {
+        let jogadorId = gol.jogador_id;
+        if (jogadorId) {
+            golsPorJogador[jogadorId] = (golsPorJogador[jogadorId] || 0) + 1;
+        }
+    });
+    
+    // Contar partidas
+    games.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeA = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        let timeB = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        
+        if (Array.isArray(timeA)) {
+            timeA.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    partidasPorJogador[jogadorId] = (partidasPorJogador[jogadorId] || 0) + 1;
+                }
+            });
+        }
+        
+        if (Array.isArray(timeB)) {
+            timeB.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    partidasPorJogador[jogadorId] = (partidasPorJogador[jogadorId] || 0) + 1;
+                }
+            });
+        }
+    });
+    
+    const ranking = Object.entries(partidasPorJogador)
+        .filter(([jogadorId, partidas]) => partidas >= 5) // Mínimo 5 partidas
+        .map(([jogadorId, partidas]) => {
+            const gols = golsPorJogador[jogadorId] || 0;
+            const media = (gols / partidas).toFixed(2);
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: parseFloat(media),
+                stats: `${media} gols/partida (${gols} gols em ${partidas} partidas)`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+    
+    renderRanking('ranking-media-gols', ranking.slice(0, 3), ranking);
+}
+
+// Ranking Parceiros Ideais (duplas que mais jogam juntas)
+function updateParceirosIdeais(games) {
+    const duplas = {};
+    
+    games.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeA = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        let timeB = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        
+        // Analisar duplas no time A
+        if (Array.isArray(timeA) && timeA.length >= 2) {
+            for (let i = 0; i < timeA.length; i++) {
+                for (let j = i + 1; j < timeA.length; j++) {
+                    let jogador1Id = typeof timeA[i] === 'string' ? timeA[i] : (timeA[i].id || timeA[i].jogador_id);
+                    let jogador2Id = typeof timeA[j] === 'string' ? timeA[j] : (timeA[j].id || timeA[j].jogador_id);
+                    
+                    if (jogador1Id && jogador2Id) {
+                        // Criar chave da dupla (ordem alfabética para evitar duplicatas)
+                        let chave = [jogador1Id, jogador2Id].sort().join('-');
+                        duplas[chave] = duplas[chave] || {
+                            jogador1Id: jogador1Id,
+                            jogador2Id: jogador2Id,
+                            partidas: 0
+                        };
+                        duplas[chave].partidas++;
+                    }
+                }
+            }
+        }
+        
+        // Analisar duplas no time B
+        if (Array.isArray(timeB) && timeB.length >= 2) {
+            for (let i = 0; i < timeB.length; i++) {
+                for (let j = i + 1; j < timeB.length; j++) {
+                    let jogador1Id = typeof timeB[i] === 'string' ? timeB[i] : (timeB[i].id || timeB[i].jogador_id);
+                    let jogador2Id = typeof timeB[j] === 'string' ? timeB[j] : (timeB[j].id || timeB[j].jogador_id);
+                    
+                    if (jogador1Id && jogador2Id) {
+                        // Criar chave da dupla (ordem alfabética para evitar duplicatas)
+                        let chave = [jogador1Id, jogador2Id].sort().join('-');
+                        duplas[chave] = duplas[chave] || {
+                            jogador1Id: jogador1Id,
+                            jogador2Id: jogador2Id,
+                            partidas: 0
+                        };
+                        duplas[chave].partidas++;
+                    }
+                }
+            }
+        }
+    });
+    
+    const ranking = Object.values(duplas)
+        .filter(dupla => dupla.partidas >= 3) // Mínimo 3 partidas juntos
+        .map(dupla => {
+            const jogador1 = statsState.allPlayers.find(p => p.id == dupla.jogador1Id);
+            const jogador2 = statsState.allPlayers.find(p => p.id == dupla.jogador2Id);
+            const nome1 = jogador1 ? jogador1.nome : 'Desconhecido';
+            const nome2 = jogador2 ? jogador2.nome : 'Desconhecido';
+            return {
+                jogador: `${nome1} & ${nome2}`,
+                valor: dupla.partidas,
+                stats: `${dupla.partidas} partida${dupla.partidas !== 1 ? 's' : ''} juntos`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+    
+    renderRanking('ranking-parceiros', ranking.slice(0, 3), ranking);
 }
 
 // Renderizar ranking
-function renderRanking(containerId, ranking) {
+function renderRanking(containerId, topRanking, fullRanking) {
     const container = document.getElementById(containerId);
     
-    if (ranking.length === 0) {
+    if (topRanking.length === 0) {
         container.innerHTML = '<div class="loading-ranking">📭 Nenhum dado encontrado</div>';
         return;
     }
     
-    const html = ranking.map((item, index) => {
+    const html = topRanking.map((item, index) => {
         const positionClass = index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other';
         return `
             <div class="ranking-item">
@@ -565,6 +839,56 @@ function renderRanking(containerId, ranking) {
     }).join('');
     
     container.innerHTML = html;
+    
+    // Configurar botão "Ver Completo" se existir mais jogadores
+    if (fullRanking && fullRanking.length > 3) {
+        const rankingCard = container.closest('.ranking-card');
+        const verCompletoBtn = rankingCard.querySelector('.ver-completo-btn');
+        if (verCompletoBtn) {
+            verCompletoBtn.style.display = 'block';
+            verCompletoBtn.onclick = () => showFullRanking(rankingCard.querySelector('h3').textContent, fullRanking);
+        }
+    } else {
+        const rankingCard = container.closest('.ranking-card');
+        const verCompletoBtn = rankingCard.querySelector('.ver-completo-btn');
+        if (verCompletoBtn) {
+            verCompletoBtn.style.display = 'none';
+        }
+    }
+}
+
+// Mostrar ranking completo no modal
+function showFullRanking(title, fullRanking) {
+    const modal = document.getElementById('modal-ranking-completo');
+    const modalTitle = document.getElementById('modal-ranking-titulo');
+    const modalContent = document.getElementById('modal-ranking-lista');
+    
+    modalTitle.textContent = title;
+    
+    const html = fullRanking.map((item, index) => {
+        const positionClass = index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : 'other';
+        return `
+            <div class="ranking-item">
+                <div class="ranking-position ${positionClass}">
+                    ${index + 1}º
+                </div>
+                <div class="ranking-info">
+                    <div class="ranking-name">${item.jogador}</div>
+                    <div class="ranking-stats">${item.stats}</div>
+                </div>
+                <div class="ranking-value">${item.valor}</div>
+            </div>
+        `;
+    }).join('');
+    
+    modalContent.innerHTML = html;
+    modal.style.display = 'flex';
+}
+
+// Fechar modal
+function closeRankingModal() {
+    const modal = document.getElementById('modal-ranking-completo');
+    modal.style.display = 'none';
 }
 
 // Atualizar histórico
@@ -604,6 +928,11 @@ function updateHistory(games, goals) {
 function renderHistory(historyItems) {
     const container = document.getElementById('historico-partidas');
     
+    // Se o elemento não existir (não estamos na página certa), sair silenciosamente
+    if (!container) {
+        return;
+    }
+    
     if (historyItems.length === 0) {
         container.innerHTML = '<div class="loading-history">📭 Nenhum histórico encontrado</div>';
         return;
@@ -642,10 +971,16 @@ function updateDetailedStats(games, goals) {
     const sessoesPeriodo = filterByDateRange(statsState.allSessions, getDateRange(statsState.currentPeriod));
     
     // Total de sessões
-    document.getElementById('total-sessoes').textContent = sessoesPeriodo.length;
+    const totalSessoesEl = document.getElementById('total-sessoes');
+    if (totalSessoesEl) {
+        totalSessoesEl.textContent = sessoesPeriodo.length;
+    }
     
     // Tempo médio (placeholder - seria necessário dados de duração)
-    document.getElementById('tempo-medio').textContent = '10min';
+    const tempoMedioEl = document.getElementById('tempo-medio');
+    if (tempoMedioEl) {
+        tempoMedioEl.textContent = '10min';
+    }
     
     // Maior goleada
     let maiorGoleada = { scoreA: 0, scoreB: 0 };
@@ -654,7 +989,10 @@ function updateDetailedStats(games, goals) {
             maiorGoleada = { scoreA: game.score_a, scoreB: game.score_b };
         }
     });
-    document.getElementById('maior-goleada').textContent = `${maiorGoleada.scoreA}-${maiorGoleada.scoreB}`;
+    const maiorGoleadaEl = document.getElementById('maior-goleada');
+    if (maiorGoleadaEl) {
+        maiorGoleadaEl.textContent = `${maiorGoleada.scoreA}-${maiorGoleada.scoreB}`;
+    }
     
     // Melhor dia (dia com mais gols)
     const golsPorDia = {};
@@ -666,12 +1004,15 @@ function updateDetailedStats(games, goals) {
     const melhorDia = Object.entries(golsPorDia)
         .sort(([,a], [,b]) => b - a)[0];
     
-    if (melhorDia) {
-        const date = new Date(melhorDia[0]);
-        const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        document.getElementById('melhor-dia').textContent = dateStr;
-    } else {
-        document.getElementById('melhor-dia').textContent = '--';
+    const melhorDiaEl = document.getElementById('melhor-dia');
+    if (melhorDiaEl) {
+        if (melhorDia) {
+            const date = new Date(melhorDia[0]);
+            const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            melhorDiaEl.textContent = dateStr;
+        } else {
+            melhorDiaEl.textContent = '--';
+        }
     }
 }
 
@@ -1019,5 +1360,422 @@ function calculatePlayerStats(playerId) {
     if (elementHatTricks) elementHatTricks.textContent = hatTricks;
     if (elementClutch) elementClutch.textContent = golsDecisivos;
     
+    // Calcular posições nos rankings gerais
+    calculatePlayerRankings(playerId);
+    
     console.log('✅ Interface atualizada com sucesso');
 }
+
+// Calcular posição do jogador nos rankings gerais
+function calculatePlayerRankings(playerId) {
+    const rankings = {
+        artilharia: calculateArtilhariaRanking(),
+        fominhas: calculateFominhasRanking(),
+        carasVitoria: calculateCarasVitoriaRanking(),
+        reisPelada: calculateReisPeladaRanking(),
+        bolaMurcha: calculateBolaMurchaRanking(),
+        mediagols: calculateMediaGolsRanking(),
+        parceiros: calculateParceirosRanking()
+    };
+    
+    // Encontrar posições do jogador
+    const positions = {
+        artilharia: findPlayerPosition(rankings.artilharia, playerId),
+        fominhas: findPlayerPosition(rankings.fominhas, playerId),
+        carasVitoria: findPlayerPosition(rankings.carasVitoria, playerId),
+        reisPelada: findPlayerPosition(rankings.reisPelada, playerId),
+        bolaMurcha: findPlayerPosition(rankings.bolaMurcha, playerId),
+        mediagols: findPlayerPosition(rankings.mediagols, playerId),
+        parceiros: findPlayerPosition(rankings.parceiros, playerId)
+    };
+    
+    // Atualizar interface
+    document.getElementById('player-rank-artilharia').textContent = positions.artilharia;
+    document.getElementById('player-rank-fominhas').textContent = positions.fominhas;
+    document.getElementById('player-rank-caras-vitoria').textContent = positions.carasVitoria;
+    document.getElementById('player-rank-reis-pelada').textContent = positions.reisPelada;
+    document.getElementById('player-rank-bola-murcha').textContent = positions.bolaMurcha;
+    document.getElementById('player-rank-media-gols').textContent = positions.mediagols;
+    document.getElementById('player-rank-parceiros').textContent = positions.parceiros;
+}
+
+// Encontrar posição do jogador no ranking
+function findPlayerPosition(ranking, playerId) {
+    const jogador = statsState.allPlayers.find(p => p.id == playerId);
+    if (!jogador) return '-';
+    
+    const position = ranking.findIndex(item => item.jogador === jogador.nome);
+    return position !== -1 ? `${position + 1}º` : '-';
+}
+
+// Calcular ranking de artilharia (igual à função updateArtilheiros mas retorna dados)
+function calculateArtilhariaRanking() {
+    const golsPorJogador = {};
+    
+    statsState.allGoals.forEach(gol => {
+        if (!golsPorJogador[gol.jogador_id]) {
+            golsPorJogador[gol.jogador_id] = 0;
+        }
+        golsPorJogador[gol.jogador_id]++;
+    });
+    
+    return Object.entries(golsPorJogador)
+        .map(([jogadorId, gols]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: gols,
+                stats: `${gols} gol${gols > 1 ? 's' : ''}`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+}
+
+// Calcular ranking de fominhas (mais participações)
+function calculateFominhasRanking() {
+    const participacoesPorJogador = {};
+    statsState.allGames.filter(g => g.status === 'finalizado').forEach(game => {
+        [game.time_a, game.time_b].forEach(timeJson => {
+            if (timeJson) {
+                let time;
+                try {
+                    time = typeof timeJson === 'string' ? JSON.parse(timeJson) : timeJson;
+                } catch (e) { time = []; }
+                if (Array.isArray(time)) {
+                    time.forEach(jogador => {
+                        let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                        if (jogadorId) {
+                            participacoesPorJogador[jogadorId] = (participacoesPorJogador[jogadorId] || 0) + 1;
+                        }
+                    });
+                }
+            }
+        });
+    });
+    
+    return Object.entries(participacoesPorJogador)
+        .map(([jogadorId, participacoes]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: participacoes,
+                stats: `${participacoes} jogo${participacoes > 1 ? 's' : ''}`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+}
+
+// Calcular ranking Os Caras da Vitória (vitórias)
+function calculateCarasVitoriaRanking() {
+    const vitoriasPorJogador = {};
+    statsState.allGames.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeVencedor = game.time_vencedor;
+        let time;
+        if (timeVencedor === 'A') {
+            time = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        } else if (timeVencedor === 'B') {
+            time = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        } else {
+            time = [];
+        }
+        if (Array.isArray(time)) {
+            time.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    vitoriasPorJogador[jogadorId] = (vitoriasPorJogador[jogadorId] || 0) + 1;
+                }
+            });
+        }
+    });
+    
+    return Object.entries(vitoriasPorJogador)
+        .map(([jogadorId, vitorias]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: vitorias,
+                stats: `${vitorias} vitória${vitorias > 1 ? 's' : ''}`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+}
+
+// Calcular ranking Reis da Pelada (vitórias + gols)
+function calculateReisPeladaRanking() {
+    const scoresPorJogador = {};
+    
+    // Contar vitórias
+    statsState.allGames.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeVencedor = game.time_vencedor;
+        let time;
+        if (timeVencedor === 'A') {
+            time = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        } else if (timeVencedor === 'B') {
+            time = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        } else {
+            time = [];
+        }
+        if (Array.isArray(time)) {
+            time.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    if (!scoresPorJogador[jogadorId]) {
+                        scoresPorJogador[jogadorId] = { vitorias: 0, gols: 0 };
+                    }
+                    scoresPorJogador[jogadorId].vitorias++;
+                }
+            });
+        }
+    });
+    
+    // Contar gols
+    statsState.allGoals.forEach(goal => {
+        if (goal.jogador_id) {
+            if (!scoresPorJogador[goal.jogador_id]) {
+                scoresPorJogador[goal.jogador_id] = { vitorias: 0, gols: 0 };
+            }
+            scoresPorJogador[goal.jogador_id].gols++;
+        }
+    });
+    
+    return Object.entries(scoresPorJogador)
+        .map(([jogadorId, stats]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            const scoreTotal = stats.vitorias + stats.gols;
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: scoreTotal,
+                stats: `${stats.vitorias} vitória${stats.vitorias !== 1 ? 's' : ''} + ${stats.gols} gol${stats.gols !== 1 ? 's' : ''} = ${scoreTotal} pontos`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+}
+
+// Calcular ranking Bola Murcha (derrotas)
+function calculateBolaMurchaRanking() {
+    const derrotasPorJogador = {};
+    const partidasPorJogador = {};
+    
+    statsState.allGames.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeVencedor = game.time_vencedor;
+        let timeA = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        let timeB = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        
+        // Contar partidas para todos os jogadores
+        if (Array.isArray(timeA)) {
+            timeA.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    partidasPorJogador[jogadorId] = (partidasPorJogador[jogadorId] || 0) + 1;
+                    derrotasPorJogador[jogadorId] = derrotasPorJogador[jogadorId] || 0;
+                    
+                    // Se time B venceu, jogadores do time A perderam
+                    if (timeVencedor === 'B') {
+                        derrotasPorJogador[jogadorId]++;
+                    }
+                }
+            });
+        }
+        
+        if (Array.isArray(timeB)) {
+            timeB.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    partidasPorJogador[jogadorId] = (partidasPorJogador[jogadorId] || 0) + 1;
+                    derrotasPorJogador[jogadorId] = derrotasPorJogador[jogadorId] || 0;
+                    
+                    // Se time A venceu, jogadores do time B perderam
+                    if (timeVencedor === 'A') {
+                        derrotasPorJogador[jogadorId]++;
+                    }
+                }
+            });
+        }
+    });
+    
+    return Object.entries(derrotasPorJogador)
+        .filter(([jogadorId, derrotas]) => partidasPorJogador[jogadorId] >= 3) // Apenas jogadores com 3+ partidas
+        .map(([jogadorId, derrotas]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            const partidas = partidasPorJogador[jogadorId];
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: derrotas,
+                stats: `${derrotas} derrota${derrotas !== 1 ? 's' : ''} em ${partidas} partida${partidas !== 1 ? 's' : ''}`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+}
+
+// Calcular ranking de primeiros gols
+function calculatePrimeirosGolsRanking() {
+    const clutchPorJogador = {};
+    
+    if (!statsState.allGoals || statsState.allGoals.length === 0) {
+        return [];
+    }
+    
+    // Contar apenas primeiros gols de cada partida (versão simplificada)
+    const partidasProcessadas = new Set();
+    
+    statsState.allGoals.forEach(gol => {
+        const partidaId = gol.partida_id;
+        const jogadorId = gol.jogador_id;
+        
+        // Se essa partida ainda não foi processada, contar este como primeiro gol
+        if (partidaId && jogadorId && !partidasProcessadas.has(partidaId)) {
+            clutchPorJogador[jogadorId] = (clutchPorJogador[jogadorId] || 0) + 1;
+            partidasProcessadas.add(partidaId);
+        }
+    });
+    
+    return Object.entries(clutchPorJogador)
+        .map(([jogadorId, golsClutch]) => {
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: golsClutch,
+                stats: `${golsClutch} primeiro${golsClutch !== 1 ? 's' : ''} gol${golsClutch !== 1 ? 's' : ''}`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+}
+
+// Calcular ranking de média de gols
+function calculateMediaGolsRanking() {
+    const golsPorJogador = {};
+    const partidasPorJogador = {};
+    
+    statsState.allGoals.forEach(gol => {
+        let jogadorId = gol.jogador_id;
+        if (jogadorId) {
+            golsPorJogador[jogadorId] = (golsPorJogador[jogadorId] || 0) + 1;
+        }
+    });
+    
+    statsState.allGames.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeA = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        let timeB = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        
+        if (Array.isArray(timeA)) {
+            timeA.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    partidasPorJogador[jogadorId] = (partidasPorJogador[jogadorId] || 0) + 1;
+                }
+            });
+        }
+        
+        if (Array.isArray(timeB)) {
+            timeB.forEach(jogador => {
+                let jogadorId = typeof jogador === 'string' ? jogador : (jogador.id || jogador.jogador_id);
+                if (jogadorId) {
+                    partidasPorJogador[jogadorId] = (partidasPorJogador[jogadorId] || 0) + 1;
+                }
+            });
+        }
+    });
+    
+    return Object.entries(partidasPorJogador)
+        .filter(([jogadorId, partidas]) => partidas >= 5)
+        .map(([jogadorId, partidas]) => {
+            const gols = golsPorJogador[jogadorId] || 0;
+            const media = (gols / partidas).toFixed(2);
+            const jogador = statsState.allPlayers.find(p => p.id == jogadorId);
+            return {
+                jogador: jogador ? jogador.nome : 'Desconhecido',
+                valor: parseFloat(media),
+                stats: `${media} gols/partida (${gols} gols em ${partidas} partidas)`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+}
+
+// Calcular ranking de parceiros ideais
+function calculateParceirosRanking() {
+    const duplas = {};
+    
+    statsState.allGames.filter(g => g.status === 'finalizado').forEach(game => {
+        let timeA = typeof game.time_a === 'string' ? JSON.parse(game.time_a) : game.time_a;
+        let timeB = typeof game.time_b === 'string' ? JSON.parse(game.time_b) : game.time_b;
+        
+        if (Array.isArray(timeA) && timeA.length >= 2) {
+            for (let i = 0; i < timeA.length; i++) {
+                for (let j = i + 1; j < timeA.length; j++) {
+                    let jogador1Id = typeof timeA[i] === 'string' ? timeA[i] : (timeA[i].id || timeA[i].jogador_id);
+                    let jogador2Id = typeof timeA[j] === 'string' ? timeA[j] : (timeA[j].id || timeA[j].jogador_id);
+                    
+                    if (jogador1Id && jogador2Id) {
+                        let chave = [jogador1Id, jogador2Id].sort().join('-');
+                        duplas[chave] = duplas[chave] || {
+                            jogador1Id: jogador1Id,
+                            jogador2Id: jogador2Id,
+                            partidas: 0
+                        };
+                        duplas[chave].partidas++;
+                    }
+                }
+            }
+        }
+        
+        if (Array.isArray(timeB) && timeB.length >= 2) {
+            for (let i = 0; i < timeB.length; i++) {
+                for (let j = i + 1; j < timeB.length; j++) {
+                    let jogador1Id = typeof timeB[i] === 'string' ? timeB[i] : (timeB[i].id || timeB[i].jogador_id);
+                    let jogador2Id = typeof timeB[j] === 'string' ? timeB[j] : (timeB[j].id || timeB[j].jogador_id);
+                    
+                    if (jogador1Id && jogador2Id) {
+                        let chave = [jogador1Id, jogador2Id].sort().join('-');
+                        duplas[chave] = duplas[chave] || {
+                            jogador1Id: jogador1Id,
+                            jogador2Id: jogador2Id,
+                            partidas: 0
+                        };
+                        duplas[chave].partidas++;
+                    }
+                }
+            }
+        }
+    });
+    
+    return Object.values(duplas)
+        .filter(dupla => dupla.partidas >= 3)
+        .map(dupla => {
+            const jogador1 = statsState.allPlayers.find(p => p.id == dupla.jogador1Id);
+            const jogador2 = statsState.allPlayers.find(p => p.id == dupla.jogador2Id);
+            const nome1 = jogador1 ? jogador1.nome : 'Desconhecido';
+            const nome2 = jogador2 ? jogador2.nome : 'Desconhecido';
+            return {
+                jogador: `${nome1} & ${nome2}`,
+                valor: dupla.partidas,
+                stats: `${dupla.partidas} partida${dupla.partidas !== 1 ? 's' : ''} juntos`
+            };
+        })
+        .sort((a, b) => b.valor - a.valor);
+}
+
+// Event listeners para o modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Fechar modal ao clicar no fundo
+    const modal = document.getElementById('modal-ranking-completo');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeRankingModal();
+            }
+        });
+    }
+    
+    // Fechar modal com botão X
+    const fecharBtn = document.getElementById('fechar-modal-ranking');
+    if (fecharBtn) {
+        fecharBtn.addEventListener('click', closeRankingModal);
+    }
+    
+    // Fechar modal com ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeRankingModal();
+        }
+    });
+});

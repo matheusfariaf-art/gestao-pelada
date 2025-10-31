@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Login e Senha</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .success { background: #e8f5e8; border-left: 4px solid #2d8f2d; }
+        .error { background: #ffeaea; border-left: 4px solid #ff4444; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #2d8f2d;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #248f24; }
+        .code {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Teste de Login e Validação de Senha</h1>
+        
+        <div class="info">
+            <strong>❌ Problema Identificado:</strong><br>
+            O sistema estava buscando <code>localStorage.getItem('userName')</code> mas o login salva como <code>localStorage.getItem('pelada3_user')</code>
+        </div>
+        
+        <div class="info success">
+            <strong>✅ Correção Aplicada:</strong><br>
+            • Corrigido <code>sorteio.js</code> - função de confirmação de times<br>
+            • Corrigido <code>fila.js</code> - função de finalização de partida<br>
+            • Corrigido <code>senha-estatisticas.js</code> - validação de acesso<br>
+            • Adicionado tratamento especial para usuário admin (senha: 4231)
+        </div>
+        
+        <h3>🧪 Teste de Funcionamento</h3>
+        
+        <button onclick="testarUsuarioLogado()">Verificar Usuário Logado</button>
+        <button onclick="simularLogin()">Simular Login Admin</button>
+        <button onclick="limparDados()">Limpar Dados</button>
+        
+        <div id="resultado"></div>
+        
+        <h3>📋 Dados Atuais do localStorage</h3>
+        <div class="code" id="dados-storage"></div>
+        
+        <div class="info">
+            <strong>🎯 Como Testar:</strong><br>
+            1. Faça login no sistema (admin/4231)<br>
+            2. Vá para a tela de sorteio<br>
+            3. Selecione jogadores e forme times<br>
+            4. Clique em "Confirmar Times"<br>
+            5. Digite a senha do usuário logado<br>
+            6. Deve funcionar sem erro "usuário não logado"
+        </div>
+    </div>
+
+    <script>
+        function atualizarDados() {
+            const dados = {
+                'pelada3_user': localStorage.getItem('pelada3_user'),
+                'userName': localStorage.getItem('userName'),
+                'jogoAtivo': localStorage.getItem('jogoAtivo')
+            };
+            
+            document.getElementById('dados-storage').textContent = JSON.stringify(dados, null, 2);
+        }
+        
+        function testarUsuarioLogado() {
+            const userData = localStorage.getItem('pelada3_user');
+            let resultado = '';
+            
+            if (!userData) {
+                resultado = '<div class="info error">❌ Nenhum usuário logado encontrado</div>';
+            } else {
+                try {
+                    const user = JSON.parse(userData);
+                    resultado = `
+                        <div class="info success">
+                            ✅ Usuário logado encontrado:<br>
+                            <strong>Username:</strong> ${user.username}<br>
+                            <strong>Nome:</strong> ${user.nome}<br>
+                            <strong>Role:</strong> ${user.role}
+                        </div>
+                    `;
+                } catch (error) {
+                    resultado = '<div class="info error">❌ Dados de usuário corrompidos</div>';
+                }
+            }
+            
+            document.getElementById('resultado').innerHTML = resultado;
+            atualizarDados();
+        }
+        
+        function simularLogin() {
+            const adminUser = {
+                id: 'admin-temp-id',
+                nome: 'Administrador',
+                username: 'admin',
+                role: 'admin',
+                ativo: true
+            };
+            
+            localStorage.setItem('pelada3_user', JSON.stringify(adminUser));
+            
+            document.getElementById('resultado').innerHTML = 
+                '<div class="info success">✅ Login admin simulado com sucesso!</div>';
+            
+            atualizarDados();
+        }
+        
+        function limparDados() {
+            localStorage.removeItem('pelada3_user');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('jogoAtivo');
+            
+            document.getElementById('resultado').innerHTML = 
+                '<div class="info">🧹 Dados limpos do localStorage</div>';
+            
+            atualizarDados();
+        }
+        
+        // Inicializar
+        atualizarDados();
+    </script>
+</body>
+</html>

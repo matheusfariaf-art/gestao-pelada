@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Contador Sortear - Mobile</title>
+    <style>
+        body { 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .players-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .players-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .player-button {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            text-align: left;
+            min-height: 44px;
+        }
+        
+        .player-button.selected {
+            background: #e8f5e8;
+            border-color: #2d8f2d;
+            color: #2d8f2d;
+            transform: scale(0.98);
+        }
+        
+        .player-name {
+            font-weight: 500;
+            line-height: 1.3;
+        }
+        
+        .player-stars {
+            font-size: 0.75rem;
+            color: #ffa500;
+        }
+        
+        .actions-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-sortear {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 20px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            background: #2d8f2d;
+            color: white;
+        }
+        
+        .btn-sortear:disabled {
+            background: #ddd;
+            color: #999;
+            cursor: not-allowed;
+        }
+        
+        .btn-sortear:not(:disabled):hover {
+            background: #248f24;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(45, 143, 45, 0.25);
+        }
+        
+        .counter-display {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .info {
+            background: #f0f9ff;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.85rem;
+            border-left: 4px solid #2d8f2d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>📱 Teste Contador Sorteio</h2>
+            <p>Contador dinâmico no botão</p>
+        </div>
+        
+        <div class="players-section">
+            <h3>👥 Selecione os Jogadores</h3>
+            
+            <div class="counter-display">
+                <span id="selected-count">0 jogadores selecionados</span>
+            </div>
+            
+            <div class="players-list">
+                <button class="player-button" onclick="togglePlayer(this, 'João')">
+                    <span class="player-name">João Silva</span>
+                    <span class="player-stars">⭐⭐⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Maria')">
+                    <span class="player-name">Maria Santos</span>
+                    <span class="player-stars">⭐⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Pedro')">
+                    <span class="player-name">Pedro Costa</span>
+                    <span class="player-stars">⭐⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Ana')">
+                    <span class="player-name">Ana Oliveira</span>
+                    <span class="player-stars">⭐⭐⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Carlos')">
+                    <span class="player-name">Carlos Lima</span>
+                    <span class="player-stars">⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Beatriz')">
+                    <span class="player-name">Beatriz Ferreira</span>
+                    <span class="player-stars">⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Rafael')">
+                    <span class="player-name">Rafael Pereira</span>
+                    <span class="player-stars">⭐⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Juliana')">
+                    <span class="player-name">Juliana Alves</span>
+                    <span class="player-stars">⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Lucas')">
+                    <span class="player-name">Lucas Barbosa</span>
+                    <span class="player-stars">⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Fernanda')">
+                    <span class="player-name">Fernanda Souza</span>
+                    <span class="player-stars">⭐⭐⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Diego')">
+                    <span class="player-name">Diego Martins</span>
+                    <span class="player-stars">⭐⭐</span>
+                </button>
+                <button class="player-button" onclick="togglePlayer(this, 'Camila')">
+                    <span class="player-name">Camila Rodrigues</span>
+                    <span class="player-stars">⭐⭐⭐⭐⭐</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="actions-section">
+            <button id="btn-sortear" class="btn-sortear" disabled onclick="simularSorteio()">
+                <span class="emoji">🎲</span>
+                <span id="sortear-text">Sortear Times: 0</span>
+            </button>
+        </div>
+        
+        <div class="info">
+            <strong>✅ Funcionalidade Implementada:</strong><br>
+            • Contador dinâmico no botão "Sortear Times"<br>
+            • Atualiza em tempo real conforme seleção<br>
+            • Ideal para uso mobile - facilita visualização<br>
+            • Botão habilitado apenas com mínimo de jogadores (12)
+        </div>
+        
+        <div class="info">
+            <strong>🎯 Teste:</strong> Clique nos jogadores acima e veja o contador no botão se atualizando automaticamente!
+        </div>
+    </div>
+
+    <script>
+        let selectedPlayers = [];
+        const MIN_PLAYERS = 12; // 6x6 = mínimo 12 jogadores
+        
+        function togglePlayer(button, playerName) {
+            const isSelected = button.classList.contains('selected');
+            
+            if (isSelected) {
+                // Desselecionar
+                button.classList.remove('selected');
+                selectedPlayers = selectedPlayers.filter(name => name !== playerName);
+            } else {
+                // Selecionar
+                button.classList.add('selected');
+                selectedPlayers.push(playerName);
+            }
+            
+            updateCounter();
+        }
+        
+        function updateCounter() {
+            const count = selectedPlayers.length;
+            
+            // Atualizar contador de seleção
+            document.getElementById('selected-count').textContent = 
+                `${count} jogador${count !== 1 ? 'es' : ''} selecionado${count !== 1 ? 's' : ''}`;
+            
+            // Atualizar texto do botão
+            document.getElementById('sortear-text').textContent = `Sortear Times: ${count}`;
+            
+            // Habilitar/desabilitar botão
+            const btnSortear = document.getElementById('btn-sortear');
+            btnSortear.disabled = count < MIN_PLAYERS;
+            
+            // Feedback visual quando não há jogadores suficientes
+            if (count > 0 && count < MIN_PLAYERS) {
+                const selectedCountEl = document.getElementById('selected-count');
+                selectedCountEl.innerHTML += ` <small style="color: #ff6b6b;">(mín. ${MIN_PLAYERS} jogadores)</small>`;
+            }
+        }
+        
+        function simularSorteio() {
+            if (selectedPlayers.length >= MIN_PLAYERS) {
+                alert(`🎲 Sorteando ${selectedPlayers.length} jogadores:\n\n${selectedPlayers.join(', ')}\n\nTimes formados com sucesso!`);
+            }
+        }
+        
+        // Inicializar contador
+        updateCounter();
+    </script>
+</body>
+</html>

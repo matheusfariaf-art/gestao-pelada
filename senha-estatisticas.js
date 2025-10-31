@@ -1,9 +1,29 @@
 // Função para obter senha do usuário logado
 async function obterSenhaUsuarioLogado() {
-    const username = localStorage.getItem('userName');
-    if (!username) {
+    // Obter dados do usuário logado
+    const userData = localStorage.getItem('pelada3_user');
+    if (!userData) {
         console.error('Usuário não logado');
         return null;
+    }
+    
+    let currentUser;
+    try {
+        currentUser = JSON.parse(userData);
+    } catch (error) {
+        console.error('Erro ao ler dados do usuário:', error);
+        return null;
+    }
+    
+    const username = currentUser.username;
+    if (!username) {
+        console.error('Nome de usuário não encontrado');
+        return null;
+    }
+    
+    // Para admin, retornar senha fixa
+    if (username === 'admin') {
+        return '4231';
     }
 
     try {

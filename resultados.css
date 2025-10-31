@@ -526,33 +526,7 @@ body {
 }
 
 /* Responsividade */
-@media (max-width: 480px) {
-    .container {
-        padding: 0 10px;
-    }
-    
-    .summary-cards {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-    
-    .jogadores-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .modal {
-        padding: 10px;
-    }
-    
-    .modal-content {
-        max-height: 90vh;
-    }
-    
-    .modal-header {
-        padding: 15px 20px 10px;
-    }
-    
-    .modal-body {
-        padding: 15px 20px;
-    }
-}
+
+
+
+

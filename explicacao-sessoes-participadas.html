@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Estatística: Sessões Participadas</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d8f2d;
+            margin-bottom: 30px;
+        }
+        
+        .stat-explanation {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #2d8f2d;
+        }
+        
+        .example {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .bug-fix {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .comparison {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .emoji-large {
+            font-size: 2rem;
+            margin: 0 10px;
+        }
+        
+        .timeline {
+            background: #f1f3f4;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+        }
+        
+        code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 Sessões Participadas - CORRIGIDO</h1>
+        
+        <div class="bug-fix">
+            <h3>🔧 Problema Corrigido</h3>
+            <p><strong>Antes:</strong> <span style="background: #ffebee; padding: 4px 8px; border-radius: 4px;">� Sessões Participadas</span> (emoji quebrado)</p>
+            <p><strong>Depois:</strong> <span style="background: #e8f5e8; padding: 4px 8px; border-radius: 4px;">📅 Sessões Participadas</span> (emoji calendário)</p>
+        </div>
+        
+        <div class="stat-explanation">
+            <h3>📊 O que significa "Sessões Participadas"?</h3>
+            <p><strong>Definição:</strong> Quantidade de <strong>dias diferentes</strong> em que o jogador participou de pelo menos uma partida.</p>
+            
+            <p><strong>💡 Conceito:</strong> Uma "sessão" é um dia de pelada. Não importa quantos jogos o jogador fez naquele dia, conta como 1 sessão apenas.</p>
+        </div>
+        
+        <div class="example">
+            <h3>📝 Exemplo Prático</h3>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <span class="emoji-large">📅</span>
+                    <div>
+                        <strong>Segunda-feira (Sessão 1):</strong><br>
+                        João jogou 3 partidas
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <span class="emoji-large">📅</span>
+                    <div>
+                        <strong>Quarta-feira (Sessão 2):</strong><br>
+                        João jogou 2 partidas
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <span class="emoji-large">📅</span>
+                    <div>
+                        <strong>Sexta-feira (Sessão 3):</strong><br>
+                        João jogou 1 partida
+                    </div>
+                </div>
+            </div>
+            
+            <p><strong>📊 Resultado Final para João:</strong></p>
+            <ul>
+                <li>⚽ <strong>Partidas:</strong> 6 (total de jogos)</li>
+                <li>📅 <strong>Sessões Participadas:</strong> 3 (3 dias diferentes)</li>
+            </ul>
+        </div>
+        
+        <div class="comparison">
+            <h3>🔍 Diferença Entre Estatísticas</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 12px; text-align: left;">Estatística</th>
+                    <th style="padding: 12px; text-align: left;">O que conta</th>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border-top: 1px solid #ddd;">⚽ <strong>Partidas</strong></td>
+                    <td style="padding: 12px; border-top: 1px solid #ddd;">Cada jogo individual</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border-top: 1px solid #ddd;">📅 <strong>Sessões</strong></td>
+                    <td style="padding: 12px; border-top: 1px solid #ddd;">Cada dia que jogou (único)</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="stat-explanation">
+            <h3>🎯 Por que essa estatística é útil?</h3>
+            <ul>
+                <li>📈 <strong>Frequência:</strong> Mostra a constância do jogador</li>
+                <li>🗓️ <strong>Assiduidade:</strong> Indica quantos dias diferentes ele apareceu</li>
+                <li>🔥 <strong>Dedicação:</strong> Diferencia quem joga muito num dia vs quem joga sempre</li>
+                <li>📊 <strong>Comparação:</strong> Permite comparar frequência entre jogadores</li>
+            </ul>
+        </div>
+        
+        <div class="example">
+            <h3>⚙️ Como é calculado no código</h3>
+            <p><strong>JavaScript:</strong></p>
+            <code>
+                let sessoesParticipadas = new Set();<br>
+                sessoesParticipadas.add(game.sessao_id);<br>
+                // Set() evita duplicatas automaticamente
+            </code>
+            
+            <p><strong>📝 Lógica:</strong> Para cada jogo que o jogador participou, adiciona o <code>sessao_id</code> em um Set. Como Set não permite duplicatas, conta apenas sessões únicas.</p>
+        </div>
+        
+        <div class="bug-fix">
+            <h3>✅ Status: Corrigido</h3>
+            <p><strong>📅 Emoji:</strong> Calendário (representa dias/sessões)</p>
+            <p><strong>🔧 Funcionalidade:</strong> Contando corretamente sessões únicas</p>
+            <p><strong>📊 Display:</strong> Mostrando o número correto na tela</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -115,8 +115,11 @@
             <a href="partida.html" class="nav-item active">
                 <span class="emoji">⚽</span>
             </a>
-            <a href="regras.html" class="nav-item">
-                <span class="emoji">⚙️</span>
+            <a href="resultados.html" class="nav-item">
+                <span class="emoji">🏆</span>
+            </a>
+            <a href="#" class="nav-item" id="cancel-footer-btn" style="display: none;">
+                <span class="emoji">❌</span>
             </a>
         </nav>
     </footer>
@@ -129,6 +132,47 @@
             <div class="modal-buttons">
                 <button id="modal-cancelar" class="btn-cancel">❌ Cancelar</button>
                 <button id="modal-confirmar" class="btn-confirm">✅ Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cancelar Partida (estilo senha) -->
+    <div id="modal-cancelar-partida" class="modal-senha" style="display: none;">
+        <div class="modal-senha-content">
+            <div class="modal-header">
+                <span class="modal-emoji">⚠️</span>
+                <h2>Cancelar Partida</h2>
+                <p>Esta ação não pode ser desfeita</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="warning-box">
+                    <div class="warning-icon">❌</div>
+                    <div class="warning-text">
+                        <strong>Atenção!</strong><br>
+                        Isso irá excluir permanentemente esta partida
+                    </div>
+                </div>
+                
+                <div class="confirmation-steps">
+                    <h4>🔍 Confirme que deseja:</h4>
+                    <ul>
+                        <li>✅ Excluir a partida atual</li>
+                        <li>✅ Manter a fila como estava</li>
+                        <li>✅ Voltar para tela da fila</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="cancelar-confirmacao" class="btn-modal-cancel">
+                    <span class="emoji">↩️</span>
+                    <span>Voltar</span>
+                </button>
+                <button id="confirmar-cancelamento" class="btn-modal-danger">
+                    <span class="emoji">🗑️</span>
+                    <span>Sim, Cancelar Partida</span>
+                </button>
             </div>
         </div>
     </div>

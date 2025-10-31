@@ -309,18 +309,3 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 480px) {
-    .container {
-        padding: 0 15px;
-    }
-    
-    .user-actions {
-        flex-direction: column;
-        gap: 5px;
-    }
-    
-    .user-btn {
-        font-size: 0.7rem;
-        padding: 6px 10px;
-    }
-}

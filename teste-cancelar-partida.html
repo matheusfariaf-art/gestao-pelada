@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste - Cancelar Partida</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d8f2d;
+            margin-bottom: 30px;
+        }
+        
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #2d8f2d;
+        }
+        
+        .feature h3 {
+            color: #2d8f2d;
+            margin-top: 0;
+        }
+        
+        .implementation {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .test-steps {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .test-steps ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .files-changed {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ Funcionalidade Implementada: Cancelar Partida</h1>
+        
+        <div class="feature">
+            <h3>✅ O que foi implementado</h3>
+            <p><strong>Botão "Cancelar Partida"</strong> que permite desfazer o início de uma partida sem interferir na fila.</p>
+            
+            <h4>🎯 Comportamento:</h4>
+            <ul>
+                <li><strong>Visibilidade:</strong> Aparece apenas quando placar está 0x0 (sem gols)</li>
+                <li><strong>Ação:</strong> Remove completamente a partida do banco de dados</li>
+                <li><strong>Fila:</strong> Mantém a fila exatamente como estava antes</li>
+                <li><strong>Redirecionamento:</strong> Volta automaticamente para tela da fila</li>
+            </ul>
+        </div>
+        
+        <div class="implementation">
+            <h3>📁 Arquivos Modificados</h3>
+            <ul>
+                <li><code>partida.html</code> - Adicionado botão cancelar</li>
+                <li><code>partida.css</code> - Estilos do botão (vermelho)</li>
+                <li><code>partida.js</code> - Lógica de cancelamento</li>
+                <li><code>database.js</code> - Função para excluir jogo</li>
+            </ul>
+        </div>
+        
+        <div class="test-steps">
+            <h3>🧪 Como Testar</h3>
+            <ol>
+                <li>Vá para a <strong>tela da fila</strong></li>
+                <li>Clique em <strong>"Iniciar Próxima Partida"</strong></li>
+                <li>Na tela da partida, você verá o botão <strong>"❌ Cancelar Partida"</strong></li>
+                <li>Clique no botão cancelar</li>
+                <li>Confirme a ação</li>
+                <li>Verifique se volta para a fila com os mesmos jogadores</li>
+            </ol>
+            
+            <p><strong>⚠️ Importante:</strong> O botão desaparece após o primeiro gol ser marcado!</p>
+        </div>
+        
+        <div class="files-changed">
+            <h3>🔧 Detalhes Técnicos</h3>
+            <p><strong>Função Principal:</strong> <code>cancelarPartida()</code></p>
+            <p><strong>Condição de Visibilidade:</strong> <code>placarA === 0 && placarB === 0</code></p>
+            <p><strong>Banco de Dados:</strong> Remove jogo e gols relacionados</p>
+            <p><strong>CSS:</strong> Botão vermelho com hover effects</p>
+        </div>
+        
+        <div class="feature">
+            <h3>✨ Benefícios</h3>
+            <ul>
+                <li>🔄 <strong>Flexibilidade:</strong> Permite ajustar a fila após iniciar por engano</li>
+                <li>🛡️ <strong>Segurança:</strong> Só funciona antes de qualquer gol</li>
+                <li>🎯 <strong>Simplicidade:</strong> Um clique para cancelar tudo</li>
+                <li>💾 <strong>Limpeza:</strong> Remove dados desnecessários do banco</li>
+            </ul>
+        </div>
+        
+        <div class="implementation">
+            <h3>🚀 Status: Pronto para Uso</h3>
+            <p>A funcionalidade está <strong>100% implementada</strong> e pronta para ser testada no seu ambiente!</p>
+        </div>
+    </div>
+</body>
+</html>

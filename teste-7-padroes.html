@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste 7 Padrões de Sorteio</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .padrao {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .padrao.ativo {
+            border-color: #2d8f2d;
+            background: #e8f5e8;
+        }
+        .tabela {
+            display: grid;
+            grid-template-columns: auto repeat(7, 1fr);
+            gap: 5px;
+            margin: 20px 0;
+            font-family: monospace;
+        }
+        .header { background: #ffc107; font-weight: bold; padding: 8px; text-align: center; }
+        .cell { background: #f8f9fa; padding: 8px; text-align: center; border: 1px solid #ddd; }
+        .estrelas { background: #fff3cd; font-weight: bold; }
+        .total { background: #d1ecf1; font-weight: bold; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #2d8f2d;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #248f24; }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Teste dos 7 Novos Padrões de Sorteio</h1>
+        
+        <div class="info">
+            <strong>✅ Implementado:</strong><br>
+            • 7 padrões distintos de formação de times<br>
+            • Verificação automática de viabilidade<br>
+            • Aplicação em ordem de prioridade<br>
+            • Fallback para sorteio equilibrado<br>
+            • Interface visual atualizada nas regras
+        </div>
+        
+        <h3>📊 Tabela de Padrões (Sua Referência)</h3>
+        <div class="tabela">
+            <div class="header">Estrelas</div>
+            <div class="header">Padrão 1</div>
+            <div class="header">Padrão 2</div>
+            <div class="header">Padrão 3</div>
+            <div class="header">Padrão 4</div>
+            <div class="header">Padrão 5</div>
+            <div class="header">Padrão 6</div>
+            <div class="header">Padrão 7</div>
+            
+            <div class="cell estrelas">5 ⭐</div>
+            <div class="cell">1</div>
+            <div class="cell">1</div>
+            <div class="cell">1</div>
+            <div class="cell">0</div>
+            <div class="cell">1</div>
+            <div class="cell">0</div>
+            <div class="cell">1</div>
+            
+            <div class="cell estrelas">4 ⭐</div>
+            <div class="cell">1</div>
+            <div class="cell">3</div>
+            <div class="cell">1</div>
+            <div class="cell">3</div>
+            <div class="cell">2</div>
+            <div class="cell">1</div>
+            <div class="cell">0</div>
+            
+            <div class="cell estrelas">3 ⭐</div>
+            <div class="cell">2</div>
+            <div class="cell">0</div>
+            <div class="cell">3</div>
+            <div class="cell">2</div>
+            <div class="cell">1</div>
+            <div class="cell">5</div>
+            <div class="cell">4</div>
+            
+            <div class="cell estrelas">2 ou 1 ⭐</div>
+            <div class="cell">2</div>
+            <div class="cell">2</div>
+            <div class="cell">1</div>
+            <div class="cell">1</div>
+            <div class="cell">2</div>
+            <div class="cell">0</div>
+            <div class="cell">1</div>
+            
+            <div class="cell total">Total</div>
+            <div class="cell total">6</div>
+            <div class="cell total">6</div>
+            <div class="cell total">6</div>
+            <div class="cell total">6</div>
+            <div class="cell total">6</div>
+            <div class="cell total">6</div>
+            <div class="cell total">6</div>
+        </div>
+
+        <h3>🎯 Padrões Implementados</h3>
+        
+        <div class="padrao">
+            <h4>🥇 Padrão 1 (Prioridade Máxima)</h4>
+            <p><strong>Mix equilibrado ideal:</strong> 1×5⭐ + 1×4⭐ + 2×3⭐ + 2×(1-2⭐)</p>
+            <p><em>Balanceamento perfeito com todos os níveis representados</em></p>
+        </div>
+
+        <div class="padrao">
+            <h4>🥈 Padrão 2</h4>
+            <p><strong>Força nos 4 estrelas:</strong> 1×5⭐ + 3×4⭐ + 2×(1-2⭐)</p>
+            <p><em>Time forte com base sólida em jogadores experientes</em></p>
+        </div>
+
+        <div class="padrao">
+            <h4>🥉 Padrão 3</h4>
+            <p><strong>Base sólida em 3 estrelas:</strong> 1×5⭐ + 1×4⭐ + 3×3⭐ + 1×(1-2⭐)</p>
+            <p><em>Equilíbrio com foco na categoria intermediária</em></p>
+        </div>
+
+        <div class="padrao">
+            <h4>🏅 Padrão 4</h4>
+            <p><strong>Sem craques, foco 4⭐:</strong> 3×4⭐ + 2×3⭐ + 1×(1-2⭐)</p>
+            <p><em>Time homogêneo sem dependência de estrelas</em></p>
+        </div>
+
+        <div class="padrao">
+            <h4>⭐ Padrão 5</h4>
+            <p><strong>Mix variado:</strong> 1×5⭐ + 2×4⭐ + 1×3⭐ + 2×(1-2⭐)</p>
+            <p><em>Distribuição alternativa com variedade</em></p>
+        </div>
+
+        <div class="padrao">
+            <h4>🎯 Padrão 6</h4>
+            <p><strong>Time médio consistente:</strong> 1×4⭐ + 5×3⭐</p>
+            <p><em>Homogeneidade na categoria média</em></p>
+        </div>
+
+        <div class="padrao">
+            <h4>🌟 Padrão 7</h4>
+            <p><strong>Um craque + base sólida:</strong> 1×5⭐ + 4×3⭐ + 1×(1-2⭐)</p>
+            <p><em>Destaque individual com suporte consistente</em></p>
+        </div>
+
+        <div class="padrao">
+            <h4>🔄 Fallback</h4>
+            <p><strong>Sorteio equilibrado:</strong> Quando nenhum padrão é viável</p>
+            <p><em>Distribuição automática balanceada</em></p>
+        </div>
+
+        <div class="info">
+            <strong>🚀 Como Testar:</strong><br>
+            1. Acesse a página de sorteio<br>
+            2. Selecione jogadores de diferentes níveis<br>
+            3. Clique em "Sortear Times"<br>
+            4. Observe a mensagem indicando qual padrão foi aplicado<br>
+            5. Verifique se a composição dos times segue o padrão mostrado
+        </div>
+
+        <div class="info">
+            <strong>📱 Arquivos Atualizados:</strong><br>
+            • <code>regras.html</code> - Interface visual dos padrões<br>
+            • <code>sorteio.js</code> - Lógica de verificação e aplicação<br>
+            • 7 funções de verificação + 7 funções de aplicação<br>
+            • Função genérica para aplicar qualquer padrão
+        </div>
+    </div>
+</body>
+</html>

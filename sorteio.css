@@ -406,63 +406,13 @@ body {
 }
 
 /* Responsividade */
-@media (min-width: 480px) {
-    .container {
-        max-width: 450px;
-    }
-}
 
-@media (max-width: 480px) {
-    .container {
-        max-width: 100%;
-        padding: 0 16px;
-    }
-    
-    .players-list {
-        grid-template-columns: 1fr;
-    }
-    
-    .controls-row {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .btn-toggle {
-        flex: none;
-    }
-}
 
-@media (max-width: 400px) {
-    .teams-container {
-        grid-template-columns: 1fr;
-        gap: 12px;
-        align-items: stretch;
-    }
-    
-    .team-card {
-        max-width: none;
-        padding: 16px;
-    }
-    
-    .teams-container .team-card:last-child:nth-child(odd) {
-        grid-column: 1;
-        max-width: none;
-    }
-}
 
-@media (min-width: 401px) and (max-width: 480px) {
-    .team-card {
-        max-width: 160px;
-    }
-    
-    .team-name {
-        font-size: 0.9rem;
-    }
-    
-    .team-player-name {
-        font-size: 0.8rem;
-    }
-}
+
+
+
+
 
 /* Modal de Senha */
 .modal-senha {

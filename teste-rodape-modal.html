@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste - Rodapé & Modal Cancelar</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d8f2d;
+            margin-bottom: 30px;
+        }
+        
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #2d8f2d;
+        }
+        
+        .feature h3 {
+            color: #2d8f2d;
+            margin-top: 0;
+        }
+        
+        .implementation {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .changes {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .modal-preview {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .emoji-large {
+            font-size: 2rem;
+            margin: 0 10px;
+        }
+        
+        .footer-demo {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .nav-demo {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+        }
+        
+        .nav-item-demo {
+            background: #2d8f2d;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.2rem;
+        }
+        
+        .nav-item-demo.cancel {
+            background: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Atualizações na Tela da Partida</h1>
+        
+        <div class="feature">
+            <h3>🔄 Mudanças Implementadas</h3>
+            <ol>
+                <li><strong>Rodapé:</strong> Regras ⚙️ → Resultados 🏆</li>
+                <li><strong>Botão Cancelar:</strong> Movido para rodapé com ❌</li>
+                <li><strong>Modal Bonito:</strong> Tela de confirmação estilo senha</li>
+                <li><strong>Dupla Confirmação:</strong> Duas etapas para cancelar</li>
+            </ol>
+        </div>
+        
+        <div class="footer-demo">
+            <h4>📱 Novo Rodapé da Partida</h4>
+            <div class="nav-demo">
+                <span class="nav-item-demo">📋</span>
+                <span class="nav-item-demo">⚽</span>
+                <span class="nav-item-demo">🏆</span>
+                <span class="nav-item-demo cancel">❌</span>
+            </div>
+            <p><small>Fila • Partida • Resultados • Cancelar</small></p>
+        </div>
+        
+        <div class="modal-preview">
+            <h3>💎 Modal de Cancelamento</h3>
+            <div style="text-align: center; padding: 20px; background: #ff6b6b; color: white; border-radius: 10px; margin: 10px 0;">
+                <div style="font-size: 3rem;">⚠️</div>
+                <h4 style="margin: 10px 0;">Cancelar Partida</h4>
+                <p style="margin: 0;">Esta ação não pode ser desfeita</p>
+            </div>
+            <div style="background: #fff3cd; padding: 15px; border-radius: 10px; margin: 10px 0;">
+                <strong>❌ Atenção!</strong><br>
+                Isso irá excluir permanentemente esta partida
+            </div>
+            <div style="display: flex; gap: 10px; margin: 10px 0;">
+                <button style="flex: 1; padding: 10px; background: #6c757d; color: white; border: none; border-radius: 8px;">↩️ Voltar</button>
+                <button style="flex: 1; padding: 10px; background: #dc3545; color: white; border: none; border-radius: 8px;">🗑️ Sim, Cancelar</button>
+            </div>
+        </div>
+        
+        <div class="changes">
+            <h3>📁 Arquivos Modificados</h3>
+            <ul>
+                <li><code>partida.html</code> - Rodapé + Modal bonito</li>
+                <li><code>partida.css</code> - Estilos do modal com animações</li>
+                <li><code>partida.js</code> - Lógica do modal e botão do rodapé</li>
+            </ul>
+        </div>
+        
+        <div class="implementation">
+            <h3>🎯 Fluxo de Cancelamento</h3>
+            <ol>
+                <li><strong>Clique no ❌</strong> do rodapé</li>
+                <li><strong>Modal aparece</strong> com aviso detalhado</li>
+                <li><strong>Usuário confirma</strong> ou volta</li>
+                <li><strong>Se confirmar:</strong> partida é excluída</li>
+                <li><strong>Redirecionamento</strong> para fila</li>
+            </ol>
+        </div>
+        
+        <div class="feature">
+            <h3>✨ Características do Modal</h3>
+            <ul>
+                <li>🎨 <strong>Visual:</strong> Gradiente vermelho, animações suaves</li>
+                <li>⚠️ <strong>Aviso:</strong> Emoji animado, texto claro</li>
+                <li>📝 <strong>Detalhes:</strong> Lista do que vai acontecer</li>
+                <li>🛡️ <strong>Segurança:</strong> Dois botões bem distintos</li>
+                <li>📱 <strong>Responsivo:</strong> Funciona em mobile</li>
+            </ul>
+        </div>
+        
+        <div class="modal-preview">
+            <h3>🚀 Status: Implementado</h3>
+            <p>Todas as mudanças foram aplicadas e estão prontas para teste!</p>
+            <p><strong>🔗 Para testar:</strong> Acesse a tela da partida e veja o novo rodapé + botão ❌</p>
+        </div>
+    </div>
+</body>
+</html>

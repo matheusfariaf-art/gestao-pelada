@@ -264,29 +264,7 @@ body {
 }
 
 /* Responsividade */
-@media (max-width: 480px) {
-    .login-container {
-        padding: 0;
-    }
-    
-    .login-card {
-        border-radius: 0;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-    
-    .login-header {
-        padding: 60px 30px 40px;
-    }
-    
-    .modal-content {
-        border-radius: 0;
-        height: 100vh;
-        max-height: 100vh;
-    }
-}
+
 
 /* Diferentes tipos de acesso */
 .role-admin {

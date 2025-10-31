@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Padrões Sorteio</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .resultado {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .time {
+            border: 2px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .jogador {
+            padding: 5px;
+            margin: 2px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #2d8f2d;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #248f24; }
+        .info { background: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Padrões do Sorteio</h1>
+    
+    <div class="info">
+        <strong>📱 Device Info:</strong>
+        <div id="device-info"></div>
+    </div>
+    
+    <div class="info">
+        <strong>🎯 Padrões Disponíveis:</strong>
+        <div>🥇 <strong>Padrão 1:</strong> 1×5⭐ + 2×4⭐ + 2×3⭐ + 1×(1-2⭐)</div>
+        <div>🥈 <strong>Padrão 2:</strong> 3×4⭐ + 2×3⭐ + 1×(1-2⭐)</div>
+        <div>🔄 <strong>Fallback:</strong> Sorteio equilibrado simples</div>
+    </div>
+    
+    <button onclick="testarPadrao1()">Testar Padrão 1 (Ideal)</button>
+    <button onclick="testarPadrao2()">Testar Padrão 2 (Alternativo)</button>
+    <button onclick="testarFallback()">Testar Fallback</button>
+    <button onclick="testarInsuficiente()">Testar Jogadores Insuficientes</button>
+    
+    <div id="resultado"></div>
+    
+    <script>
+        // Detectar informações do dispositivo
+        document.getElementById('device-info').innerHTML = `
+            <div>User Agent: ${navigator.userAgent.substring(0, 50)}...</div>
+            <div>Tela: ${window.innerWidth}×${window.innerHeight}</div>
+            <div>Mobile: ${/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'SIM' : 'NÃO'}</div>
+            <div>Touch: ${'ontouchstart' in window ? 'SIM' : 'NÃO'}</div>
+        `;
+        
+        // Simular algoritmo de verificação de padrões
+        function verificarPadrao1(count, numeroTimes) {
+            const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
+            const timesParaTentar = Math.min(numeroTimes, timesCompletos);
+            
+            const necessario = {
+                5: timesParaTentar * 1,
+                4: timesParaTentar * 2,
+                3: timesParaTentar * 2,
+                baixo: timesParaTentar * 1
+            };
+            
+            const disponivel = {
+                5: count[5],
+                4: count[4], 
+                3: count[3],
+                baixo: count[1] + count[2]
+            };
+            
+            return timesParaTentar > 0 && (
+                disponivel[5] >= necessario[5] &&
+                disponivel[4] >= necessario[4] &&
+                disponivel[3] >= necessario[3] &&
+                disponivel.baixo >= necessario.baixo
+            );
+        }
+        
+        function verificarPadrao2(count, numeroTimes) {
+            const timesCompletos = Math.floor((count[5] + count[4] + count[3] + count[2] + count[1]) / 6);
+            const timesParaTentar = Math.min(numeroTimes, timesCompletos);
+            
+            const necessario = {
+                4: timesParaTentar * 3,
+                3: timesParaTentar * 2,
+                baixo: timesParaTentar * 1
+            };
+            
+            const disponivel = {
+                4: count[4],
+                3: count[3],
+                baixo: count[1] + count[2]
+            };
+            
+            return timesParaTentar > 0 && (
+                disponivel[4] >= necessario[4] &&
+                disponivel[3] >= necessario[3] &&
+                disponivel.baixo >= necessario.baixo
+            );
+        }
+        
+        function mostrarResultado(titulo, jogadores, padrao) {
+            const count = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+            jogadores.forEach(j => count[j.nivel]++);
+            
+            const numeroTimes = 2;
+            const padrao1OK = verificarPadrao1(count, numeroTimes);
+            const padrao2OK = verificarPadrao2(count, numeroTimes);
+            
+            let padraoEscolhido = 'Fallback (Equilibrado)';
+            if (padrao1OK) padraoEscolhido = '🥇 Padrão 1';
+            else if (padrao2OK) padraoEscolhido = '🥈 Padrão 2';
+            
+            document.getElementById('resultado').innerHTML = `
+                <div class="resultado">
+                    <h3>${titulo}</h3>
+                    <div><strong>Jogadores:</strong> ${jogadores.map(j => `${j.nome} (${j.nivel}⭐)`).join(', ')}</div>
+                    <div><strong>Distribuição:</strong> 5⭐=${count[5]}, 4⭐=${count[4]}, 3⭐=${count[3]}, 2⭐=${count[2]}, 1⭐=${count[1]}</div>
+                    <div><strong>Padrão 1 Possível:</strong> ${padrao1OK ? '✅ SIM' : '❌ NÃO'}</div>
+                    <div><strong>Padrão 2 Possível:</strong> ${padrao2OK ? '✅ SIM' : '❌ NÃO'}</div>
+                    <div style="background: ${padrao1OK ? '#d4edda' : padrao2OK ? '#fff3cd' : '#f8d7da'}; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                        <strong>🎯 Resultado: ${padraoEscolhido}</strong>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function testarPadrao1() {
+            const jogadores = [
+                {nome: 'João', nivel: 5}, {nome: 'Pedro', nivel: 5},
+                {nome: 'Ana', nivel: 4}, {nome: 'Maria', nivel: 4}, {nome: 'Carlos', nivel: 4}, {nome: 'José', nivel: 4},
+                {nome: 'Lucas', nivel: 3}, {nome: 'Bruno', nivel: 3}, {nome: 'Paulo', nivel: 3}, {nome: 'Marcos', nivel: 3},
+                {nome: 'Felipe', nivel: 2}, {nome: 'Diego', nivel: 1}
+            ];
+            mostrarResultado('🧪 Teste Padrão 1 (Ideal)', jogadores, 1);
+        }
+        
+        function testarPadrao2() {
+            const jogadores = [
+                {nome: 'Ana', nivel: 4}, {nome: 'Maria', nivel: 4}, {nome: 'Carlos', nivel: 4}, 
+                {nome: 'José', nivel: 4}, {nome: 'Rita', nivel: 4}, {nome: 'Julia', nivel: 4},
+                {nome: 'Lucas', nivel: 3}, {nome: 'Bruno', nivel: 3}, {nome: 'Paulo', nivel: 3}, {nome: 'Marcos', nivel: 3},
+                {nome: 'Felipe', nivel: 2}, {nome: 'Diego', nivel: 1}
+            ];
+            mostrarResultado('🧪 Teste Padrão 2 (Sem 5⭐)', jogadores, 2);
+        }
+        
+        function testarFallback() {
+            const jogadores = [
+                {nome: 'João', nivel: 5}, {nome: 'Pedro', nivel: 5}, {nome: 'Ana', nivel: 5},
+                {nome: 'Maria', nivel: 1}, {nome: 'Carlos', nivel: 1}, {nome: 'José', nivel: 1},
+                {nome: 'Lucas', nivel: 1}, {nome: 'Bruno', nivel: 1}, {nome: 'Paulo', nivel: 1},
+                {nome: 'Felipe', nivel: 2}, {nome: 'Diego', nivel: 2}, {nome: 'Marcos', nivel: 2}
+            ];
+            mostrarResultado('🧪 Teste Fallback (Distribuição Irregular)', jogadores, 'fallback');
+        }
+        
+        function testarInsuficiente() {
+            const jogadores = [
+                {nome: 'João', nivel: 5}, {nome: 'Pedro', nivel: 4}, 
+                {nome: 'Ana', nivel: 3}, {nome: 'Maria', nivel: 2}
+            ];
+            mostrarResultado('🧪 Teste Jogadores Insuficientes', jogadores, 'insuficiente');
+        }
+    </script>
+</body>
+</html>

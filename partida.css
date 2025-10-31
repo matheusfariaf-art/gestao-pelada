@@ -614,6 +614,198 @@ body {
     background: linear-gradient(135deg, #245d24, #45a049);
 }
 
+/* Modal Cancelar Partida (estilo senha) */
+.modal-senha {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    animation: fadeIn 0.3s ease;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-senha-content {
+    background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+    margin: 0;
+    padding: 0;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 420px;
+    max-height: 90vh;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: slideIn 0.4s ease;
+    position: relative;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+    padding: 30px 25px;
+    text-align: center;
+    position: relative;
+}
+
+.modal-emoji {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 10px;
+    animation: bounce 2s infinite;
+}
+
+.modal-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.modal-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.9rem;
+}
+
+.modal-body {
+    padding: 25px;
+}
+
+.warning-box {
+    background: linear-gradient(135deg, #fff3cd 0%, #fef8e4 100%);
+    border: 2px solid #ffeaa7;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.warning-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.warning-text {
+    flex: 1;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.warning-text strong {
+    color: #d4861b;
+}
+
+.confirmation-steps {
+    margin-top: 20px;
+}
+
+.confirmation-steps h4 {
+    color: #333;
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+}
+
+.confirmation-steps ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.confirmation-steps li {
+    padding: 8px 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.modal-actions {
+    padding: 20px 25px 25px;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.btn-modal-cancel {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    flex: 1;
+    justify-content: center;
+}
+
+.btn-modal-cancel:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+    transform: translateY(-1px);
+}
+
+.btn-modal-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    flex: 1;
+    justify-content: center;
+}
+
+.btn-modal-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-50px) scale(0.8);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Responsividade do Modal para Mobile */
+
+
+
+
 /* Loading */
 .loading {
     display: none;
@@ -660,43 +852,7 @@ body {
 }
 
 /* Responsividade */
-@media (max-width: 400px) {
-    .container {
-        max-width: 100%;
-    }
-    
-    .match-content {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .timer-display {
-        font-size: 2rem;
-    }
-    
-    .score {
-        font-size: 2.5rem;
-    }
-    
-    .scoreboard {
-        margin: 12px;
-        padding: 16px;
-    }
-    
-    .match-controls {
-        grid-template-columns: 1fr;
-        gap: 8px;
-        margin: 0 12px;
-    }
-    
-    .control-btn {
-        padding: 10px 12px;
-    }
-    
-    .var-btn {
-        order: -1;
-    }
-}
+
 
 /* Estados do jogo */
 .game-paused .timer-display {
@@ -915,36 +1071,7 @@ body {
 }
 
 /* Responsividade para tela sem jogo */
-@media (max-width: 400px) {
-    .no-game-content {
-        padding: 16px;
-        max-width: 350px;
-    }
-    
-    .no-game-animation {
-        height: 150px;
-        margin-bottom: 30px;
-    }
-    
-    .ball {
-        font-size: 3rem;
-    }
-    
-    .no-game-text h2 {
-        font-size: 1.3rem;
-    }
-    
-    .no-game-text p {
-        font-size: 0.9rem;
-    }
-    
-    .go-to-queue-btn,
-    .refresh-game-btn {
-        padding: 14px 24px;
-        font-size: 0.9rem;
-        min-width: 180px;
-    }
-}
+
 
 /* Modal de Seleção de Jogador para Gol */
 .lista-jogadores-gol {

@@ -1004,6 +1004,44 @@ async function criarNovoJogo(sessaoId, timeA, timeB) {
     }
 }
 
+// Função para excluir jogo (cancelar partida)
+async function excluirJogo(jogoId) {
+    try {
+        console.log('🗑️ Excluindo jogo:', jogoId);
+        
+        const supabase = initializeSupabase();
+        if (!supabase) return false;
+
+        // Primeiro, excluir todos os gols relacionados ao jogo
+        const { error: golsError } = await supabase
+            .from('gols')
+            .delete()
+            .eq('jogo_id', jogoId);
+
+        if (golsError) {
+            console.error('Erro ao excluir gols:', golsError);
+            return false;
+        }
+
+        // Depois, excluir o jogo
+        const { error: jogoError } = await supabase
+            .from('jogos')
+            .delete()
+            .eq('id', jogoId);
+
+        if (jogoError) {
+            console.error('Erro ao excluir jogo:', jogoError);
+            return false;
+        }
+
+        console.log('✅ Jogo e gols excluídos com sucesso');
+        return true;
+    } catch (error) {
+        console.error('Erro ao excluir jogo:', error);
+        return false;
+    }
+}
+
 // Função para obter jogo por ID
 async function obterJogo(jogoId) {
     try {

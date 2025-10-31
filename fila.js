@@ -1530,16 +1530,60 @@ async function solicitarSenhaEncerrarPelada() {
         const verificarSenha = async () => {
             const senhaDigitada = inputSenha.value.trim();
             
-            // Obter senha do usuário logado
-            const username = localStorage.getItem('userName');
-            if (!username) {
+            // Obter dados do usuário logado
+            const userData = localStorage.getItem('pelada3_user');
+            if (!userData) {
                 alert('Erro: Usuário não logado');
+                document.body.removeChild(modal);
+                resolve(false);
+                return;
+            }
+            
+            let currentUser;
+            try {
+                currentUser = JSON.parse(userData);
+            } catch (error) {
+                console.error('Erro ao ler dados do usuário:', error);
+                alert('Erro: Dados de usuário inválidos');
+                document.body.removeChild(modal);
+                resolve(false);
+                return;
+            }
+            
+            const username = currentUser.username;
+            if (!username) {
+                alert('Erro: Nome de usuário não encontrado');
                 document.body.removeChild(modal);
                 resolve(false);
                 return;
             }
 
             try {
+                // Para admin, verificar senha fixa
+                if (username === 'admin') {
+                    if (senhaDigitada === '4231') {
+                        document.body.removeChild(modal);
+                        resolve(true);
+                        return;
+                    } else {
+                        // Senha incorreta - mostrar erro
+                        inputSenha.style.borderColor = '#ff4444';
+                        inputSenha.style.backgroundColor = '#fff5f5';
+                        inputSenha.value = '';
+                        inputSenha.placeholder = '❌ Senha incorreta - Digite sua senha de usuário';
+                        inputSenha.focus();
+                        
+                        // Resetar estilo após 3 segundos
+                        setTimeout(() => {
+                            inputSenha.style.borderColor = '';
+                            inputSenha.style.backgroundColor = '';
+                            inputSenha.placeholder = 'Digite sua senha';
+                        }, 3000);
+                        return;
+                    }
+                }
+                
+                // Para outros usuários, verificar no banco
                 const { data, error } = await supabase
                     .from('usuarios')
                     .select('senha')

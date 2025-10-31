@@ -418,6 +418,23 @@ function configurarEventListeners() {
     // Botão Finalizar
     document.getElementById('finish-btn').addEventListener('click', finalizarPartida);
     
+    // Botão Cancelar Partida no rodapé
+    document.getElementById('cancel-footer-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        mostrarModalCancelarPartida();
+    });
+    
+    // Botões do modal cancelar partida
+    document.getElementById('cancelar-confirmacao').addEventListener('click', fecharModalCancelarPartida);
+    document.getElementById('confirmar-cancelamento').addEventListener('click', cancelarPartida);
+    
+    // Fechar modal cancelar clicando fora
+    document.getElementById('modal-cancelar-partida').addEventListener('click', (e) => {
+        if (e.target.id === 'modal-cancelar-partida') {
+            fecharModalCancelarPartida();
+        }
+    });
+    
     // Modal confirmação
     document.getElementById('modal-cancelar').addEventListener('click', () => fecharModal());
     document.getElementById('modal-confirmar').addEventListener('click', confirmarAcao);
@@ -728,6 +745,24 @@ function atualizarStatusCronometro(status) {
 // Atualizar botões conforme estado
 function atualizarBotoes() {
     atualizarBotaoCronometro();
+    atualizarBotaoCancelar();
+}
+
+// Atualizar visibilidade do botão cancelar
+function atualizarBotaoCancelar() {
+    const cancelFooterBtn = document.getElementById('cancel-footer-btn');
+    if (!cancelFooterBtn) return;
+    
+    // Mostrar botão cancelar apenas se:
+    // 1. Não há gols marcados (placar 0x0)
+    // 2. Partida não foi finalizada
+    const podeSerCancelada = (estadoPartida.placarA === 0 && estadoPartida.placarB === 0);
+    
+    if (podeSerCancelada) {
+        cancelFooterBtn.style.display = 'flex';
+    } else {
+        cancelFooterBtn.style.display = 'none';
+    }
 }
 
 // Atualizar botão do cronômetro
@@ -1098,7 +1133,65 @@ async function desfazerUltimoGol(gol) {
     }
 }
 
+// Funções do Modal Cancelar Partida
+function mostrarModalCancelarPartida() {
+    const modal = document.getElementById('modal-cancelar-partida');
+    if (modal) {
+        modal.style.display = 'flex';
+        // Prevenir scroll do body
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function fecharModalCancelarPartida() {
+    const modal = document.getElementById('modal-cancelar-partida');
+    if (modal) {
+        modal.style.display = 'none';
+        // Restaurar scroll do body
+        document.body.style.overflow = '';
+    }
+}
+
 // Finalizar partida
+// Função para cancelar partida (só no início, sem gols)
+async function cancelarPartida() {
+    // Fechar modal primeiro
+    fecharModalCancelarPartida();
+    
+    // Verificar se há gols registrados
+    if (estadoPartida.placarA > 0 || estadoPartida.placarB > 0) {
+        alert('❌ Não é possível cancelar a partida após gols terem sido marcados.');
+        return;
+    }
+    
+    try {
+        console.log('🔄 Cancelando partida:', estadoPartida.jogoId);
+        
+        // Parar cronômetro se estiver rodando
+        if (intervaloCronometro) {
+            clearInterval(intervaloCronometro);
+            intervaloCronometro = null;
+        }
+        
+        // Excluir jogo do banco de dados
+        const resultado = await excluirJogo(estadoPartida.jogoId);
+        
+        if (resultado) {
+            console.log('✅ Partida cancelada com sucesso');
+            alert('✅ Partida cancelada! Voltando para a fila...');
+            
+            // Redirecionar para fila
+            window.location.href = 'fila.html';
+        } else {
+            throw new Error('Erro ao excluir jogo do banco');
+        }
+        
+    } catch (error) {
+        console.error('Erro ao cancelar partida:', error);
+        alert('❌ Erro ao cancelar partida. Tente novamente.');
+    }
+}
+
 function finalizarPartida() {
     let mensagem = '';
     

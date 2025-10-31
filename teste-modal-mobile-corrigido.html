@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste Modal Cancelar - Mobile</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d8f2d;
+            margin-bottom: 30px;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+            transition: all 0.2s ease;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+        
+        .feature {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #2d8f2d;
+        }
+        
+        .mobile-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .fixes {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        /* Reproduzir o CSS do modal para teste */
+        .modal-senha {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.3s ease;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-senha-content {
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            margin: 0;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 420px;
+            max-height: 90vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: slideIn 0.4s ease;
+            position: relative;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            padding: 30px 25px;
+            text-align: center;
+            position: relative;
+        }
+
+        .modal-emoji {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 10px;
+            animation: bounce 2s infinite;
+        }
+
+        .modal-header h2 {
+            margin: 0 0 8px 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .modal-header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fff3cd 0%, #fef8e4 100%);
+            border: 2px solid #ffeaa7;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .warning-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .warning-text {
+            flex: 1;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .warning-text strong {
+            color: #d4861b;
+        }
+
+        .confirmation-steps {
+            margin-top: 20px;
+        }
+
+        .confirmation-steps h4 {
+            color: #333;
+            margin: 0 0 12px 0;
+            font-size: 1rem;
+        }
+
+        .confirmation-steps ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .confirmation-steps li {
+            padding: 8px 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .modal-actions {
+            padding: 20px 25px 25px;
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+        }
+
+        .btn-modal-cancel, .btn-modal-danger {
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .btn-modal-cancel {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+        }
+
+        .btn-modal-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-50px) scale(0.8);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* Responsividade para Mobile */
+        @media (max-width: 480px) {
+            .modal-senha-content {
+                width: 95%;
+                max-width: 100%;
+                margin: 0;
+                border-radius: 16px;
+                max-height: 95vh;
+            }
+            
+            .modal-header {
+                padding: 25px 20px;
+            }
+            
+            .modal-emoji {
+                font-size: 2.5rem;
+                margin-bottom: 8px;
+            }
+            
+            .modal-header h2 {
+                font-size: 1.2rem;
+            }
+            
+            .modal-header p {
+                font-size: 0.85rem;
+            }
+            
+            .modal-body {
+                padding: 20px;
+            }
+            
+            .warning-box {
+                padding: 15px;
+                gap: 12px;
+            }
+            
+            .warning-icon {
+                font-size: 1.5rem;
+            }
+            
+            .warning-text {
+                font-size: 0.9rem;
+            }
+            
+            .confirmation-steps h4 {
+                font-size: 0.95rem;
+            }
+            
+            .confirmation-steps li {
+                font-size: 0.85rem;
+                padding: 6px 0;
+            }
+            
+            .modal-actions {
+                padding: 15px 20px 20px;
+                gap: 10px;
+                flex-direction: column;
+            }
+            
+            .btn-modal-cancel,
+            .btn-modal-danger {
+                padding: 14px 20px;
+                font-size: 0.9rem;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .modal-senha-content {
+                width: 98%;
+                border-radius: 12px;
+            }
+            
+            .modal-header {
+                padding: 20px 15px;
+            }
+            
+            .modal-body {
+                padding: 15px;
+            }
+            
+            .modal-actions {
+                padding: 12px 15px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Modal Cancelar - Corrigido</h1>
+        
+        <div class="fixes">
+            <h3>✅ Correções Aplicadas</h3>
+            <ul>
+                <li><strong>CSS:</strong> Modal centralizado com flexbox</li>
+                <li><strong>Responsivo:</strong> Adaptado para mobile e telas pequenas</li>
+                <li><strong>Z-index:</strong> Garantido que fica acima de tudo</li>
+                <li><strong>Overflow:</strong> Scroll do body bloqueado quando modal aberto</li>
+                <li><strong>Click fora:</strong> Fecha modal clicando no backdrop</li>
+            </ul>
+        </div>
+        
+        <button class="test-button" onclick="showModal()">
+            ❌ Testar Modal Cancelar
+        </button>
+        
+        <div class="mobile-info">
+            <h3>📱 Otimizações Mobile</h3>
+            <ul>
+                <li><strong>Largura:</strong> 95% em mobile, 98% em telas muito pequenas</li>
+                <li><strong>Altura:</strong> Max 95vh para não sair da tela</li>
+                <li><strong>Botões:</strong> Em coluna no mobile para melhor toque</li>
+                <li><strong>Textos:</strong> Fontes menores em telas pequenas</li>
+                <li><strong>Padding:</strong> Reduzido para economizar espaço</li>
+            </ul>
+        </div>
+        
+        <div class="feature">
+            <h3>🎯 Funcionamento</h3>
+            <p>O modal agora:</p>
+            <ul>
+                <li>✅ <strong>Aparece centralizado</strong> na tela</li>
+                <li>✅ <strong>Funciona no mobile</strong> igual ao desktop</li>
+                <li>✅ <strong>Fecha clicando fora</strong> ou no botão voltar</li>
+                <li>✅ <strong>Bloqueia scroll</strong> do fundo</li>
+                <li>✅ <strong>Animações suaves</strong> em todas as telas</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Modal de teste -->
+    <div id="modal-test" class="modal-senha">
+        <div class="modal-senha-content">
+            <div class="modal-header">
+                <span class="modal-emoji">⚠️</span>
+                <h2>Cancelar Partida</h2>
+                <p>Esta ação não pode ser desfeita</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="warning-box">
+                    <div class="warning-icon">❌</div>
+                    <div class="warning-text">
+                        <strong>Atenção!</strong><br>
+                        Isso irá excluir permanentemente esta partida
+                    </div>
+                </div>
+                
+                <div class="confirmation-steps">
+                    <h4>🔍 Confirme que deseja:</h4>
+                    <ul>
+                        <li>✅ Excluir a partida atual</li>
+                        <li>✅ Manter a fila como estava</li>
+                        <li>✅ Voltar para tela da fila</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" onclick="hideModal()">
+                    <span class="emoji">↩️</span>
+                    <span>Voltar</span>
+                </button>
+                <button class="btn-modal-danger" onclick="confirmCancel()">
+                    <span class="emoji">🗑️</span>
+                    <span>Sim, Cancelar Partida</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showModal() {
+            const modal = document.getElementById('modal-test');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function hideModal() {
+            const modal = document.getElementById('modal-test');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        
+        function confirmCancel() {
+            alert('✅ Modal funcionando! Partida seria cancelada aqui.');
+            hideModal();
+        }
+        
+        // Fechar clicando fora
+        document.getElementById('modal-test').addEventListener('click', (e) => {
+            if (e.target.id === 'modal-test') {
+                hideModal();
+            }
+        });
+    </script>
+</body>
+</html>

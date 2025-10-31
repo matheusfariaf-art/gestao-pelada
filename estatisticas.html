@@ -30,8 +30,10 @@
             <section class="individual-stats" id="individual-stats" style="display: none;">
                 <h4 id="player-name-title">Estatísticas de</h4>
                 
-                <!-- Cards Básicos -->
-                <div class="summary-cards">
+                <!-- Estatísticas Básicas -->
+                <div class="stats-category">
+                    <h5 class="category-title">🎯 Estatísticas Básicas</h5>
+                    <div class="summary-cards">
                         <div class="summary-card">
                             <div class="card-icon">⚽</div>
                             <div class="card-content">
@@ -60,7 +62,13 @@
                                 <div class="card-label">Empates</div>
                             </div>
                         </div>
-                    
+                    </div>
+                </div>
+
+                <!-- Performance -->
+                <div class="stats-category">
+                    <h5 class="category-title">📈 Performance</h5>
+                    <div class="summary-cards">
                         <div class="summary-card">
                             <div class="card-icon">🎯</div>
                             <div class="card-content">
@@ -82,7 +90,13 @@
                                 <div class="card-label">Média de Gols</div>
                             </div>
                         </div>
-                    
+                    </div>
+                </div>
+
+                <!-- Tempo e Participação -->
+                <div class="stats-category">
+                    <h5 class="category-title">⏱️ Tempo & Participação</h5>
+                    <div class="summary-cards">
                         <div class="summary-card">
                             <div class="card-icon">⏱️</div>
                             <div class="card-content">
@@ -97,9 +111,8 @@
                                 <div class="card-label">Tempo Médio/Partida</div>
                             </div>
                         </div>
-                    
                         <div class="summary-card">
-                            <div class="card-icon">�</div>
+                            <div class="card-icon">📅</div>
                             <div class="card-content">
                                 <div class="card-number" id="player-sessoes">0</div>
                                 <div class="card-label">Sessões Participadas</div>
@@ -119,14 +132,76 @@
                                 <div class="card-label">Parceiro Frequente</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Posições nos Rankings -->
+                <div class="stats-category">
+                    <h5 class="category-title">🏆 Posições nos Rankings</h5>
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <div class="card-icon">🥅</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-rank-artilharia">-</div>
+                                <div class="card-label">Pos. Artilharia</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">🏃</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-rank-fominhas">-</div>
+                                <div class="card-label">Pos. Fominhas</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">🏆</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-rank-caras-vitoria">-</div>
+                                <div class="card-label">Pos. Caras da Vitória</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">👑</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-rank-reis-pelada">-</div>
+                                <div class="card-label">Pos. Reis da Pelada</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">�</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-rank-bola-murcha">-</div>
+                                <div class="card-label">Pos. Bola Murcha</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">🎲</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-rank-primeiros-gols">-</div>
+                                <div class="card-label">Pos. Primeiros Gols</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="card-icon">📊</div>
+                            <div class="card-content">
+                                <div class="card-number" id="player-rank-media-gols">-</div>
+                                <div class="card-label">Pos. Média de Gols</div>
+                            </div>
+                        </div>
                         <div class="summary-card">
                             <div class="card-icon">🔄</div>
                             <div class="card-content">
-                                <div class="card-number" id="player-posicao">-</div>
-                                <div class="card-label">Posição Favorita</div>
+                                <div class="card-number" id="player-rank-parceiros">-</div>
+                                <div class="card-label">Pos. Parceiros Ideais</div>
                             </div>
                         </div>
-                    
+                    </div>
+                </div>
+
+                <!-- Feitos Especiais -->
+                <div class="stats-category">
+                    <h5 class="category-title">🏅 Feitos Especiais</h5>
+                    <div class="summary-cards">
                         <div class="summary-card">
                             <div class="card-icon">🥇</div>
                             <div class="card-content">
@@ -148,7 +223,9 @@
                                 <div class="card-label">Gols Decisivos</div>
                             </div>
                         </div>
-                    </div></section>
+                    </div>
+                </div>
+            </section>
 
             <!-- Filtros Gerais -->
             <section class="general-filters">
@@ -171,22 +248,77 @@
                     <div id="ranking-artilheiros" class="ranking-list">
                         <div class="loading-ranking">⏳ Carregando...</div>
                     </div>
+                    <button class="ver-completo-btn" id="ver-completo-artilheiros" style="display: none;">
+                        📋 Ver Ranking Completo
+                    </button>
                 </div>
 
-                <!-- Jogadores Mais Ativos -->
+                <!-- Jogadores Mais Ativos (Fominhas) -->
                 <div class="ranking-card">
                     <h3>🏃‍♂️ Fominhas</h3>
                     <div id="ranking-participacoes" class="ranking-list">
                         <div class="loading-ranking">⏳ Carregando...</div>
                     </div>
+                    <button class="ver-completo-btn" id="ver-completo-participacoes" style="display: none;">
+                        📋 Ver Ranking Completo
+                    </button>
                 </div>
 
-                <!-- Aproveitamento -->
+                <!-- Os Caras da Vitória (antigo Reis da Pelada) -->
                 <div class="ranking-card">
-                    <h3>👑 Reis da Pelada</h3>
+                    <h3>💪 Os Caras da Vitória</h3>
                     <div id="ranking-eficiencia" class="ranking-list">
                         <div class="loading-ranking">⏳ Carregando...</div>
-                    </div></section>
+                    </div>
+                    <button class="ver-completo-btn" id="ver-completo-eficiencia" style="display: none;">
+                        📋 Ver Ranking Completo
+                    </button>
+                </div>
+
+                <!-- Reis da Pelada (vitórias + gols) -->
+                <div class="ranking-card">
+                    <h3>👑 Reis da Pelada</h3>
+                    <div id="ranking-reis" class="ranking-list">
+                        <div class="loading-ranking">⏳ Carregando...</div>
+                    </div>
+                    <button class="ver-completo-btn" id="ver-completo-reis" style="display: none;">
+                        📋 Ver Ranking Completo
+                    </button>
+                </div>
+
+                <!-- Bola Murcha (mais derrotas) -->
+                <div class="ranking-card">
+                    <h3>😴 Bola Murcha</h3>
+                    <div id="ranking-derrotas" class="ranking-list">
+                        <div class="loading-ranking">⏳ Carregando...</div>
+                    </div>
+                    <button class="ver-completo-btn" id="ver-completo-derrotas" style="display: none;">
+                        📋 Ver Ranking Completo
+                    </button>
+                </div>
+
+                <!-- Média de Gols (mín. 5 jogos) -->
+                <div class="ranking-card">
+                    <h3>📊 Média de Gols</h3>
+                    <div id="ranking-media-gols" class="ranking-list">
+                        <div class="loading-ranking">⏳ Carregando...</div>
+                    </div>
+                    <button class="ver-completo-btn" id="ver-completo-media-gols" style="display: none;">
+                        📋 Ver Ranking Completo
+                    </button>
+                </div>
+
+                <!-- Parceiros Ideais -->
+                <div class="ranking-card">
+                    <h3>🔄 Parceiros Ideais</h3>
+                    <div id="ranking-parceiros" class="ranking-list">
+                        <div class="loading-ranking">⏳ Carregando...</div>
+                    </div>
+                    <button class="ver-completo-btn" id="ver-completo-parceiros" style="display: none;">
+                        📋 Ver Ranking Completo
+                    </button>
+                </div>
+            </section>
 
             <!-- Histórico por Data -->
             <!-- Histórico por Data removido, pois já existe resumo acima -->
@@ -209,6 +341,21 @@
             </a>
         </nav>
     </footer>
+
+    <!-- Modal Ranking Completo -->
+    <div id="modal-ranking-completo" class="modal-ranking" style="display: none;">
+        <div class="modal-ranking-content">
+            <div class="modal-ranking-header">
+                <h3 id="modal-ranking-titulo">Ranking Completo</h3>
+                <button id="fechar-modal-ranking" class="fechar-modal">✕</button>
+            </div>
+            <div class="modal-ranking-body">
+                <div id="modal-ranking-lista" class="ranking-completo-lista">
+                    <!-- Lista completa será inserida aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
