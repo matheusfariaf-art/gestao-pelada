@@ -352,10 +352,35 @@ function executarSorteioInteligente(jogadoresPorNivel, times, jogadoresPorTime) 
     };
     
     console.log('Jogadores por nível:', count);
+    console.log('Device info:', {
+        userAgent: navigator.userAgent,
+        isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+        screenWidth: window.innerWidth,
+        screenHeight: window.innerHeight,
+        touchSupport: 'ontouchstart' in window
+    });
     
-    // FOCO APENAS NO EQUILÍBRIO - sem padrões complexos
-    console.log('=== APLICANDO SORTEIO EQUILIBRADO ===');
-    aplicarSorteioEquilibrado(jogadoresPorNivel, times, jogadoresPorTime);
+    // APLICAR PADRÕES CONFORME REGRAS
+    console.log('=== VERIFICANDO PADRÕES DE TIMES ===');
+    
+    // Verificar se Padrão 1 é possível
+    if (verificarPadrao1(count, numeroTimes)) {
+        console.log('✅ Aplicando Padrão 1: 1x5⭐ + 2x4⭐ + 2x3⭐ + 1x(1-2⭐)');
+        mostrarMensagem('🥇 Padrão 1: 1×5⭐ + 2×4⭐ + 2×3⭐ + 1×(1-2⭐)', 'success');
+        aplicarPadrao1(jogadoresPorNivel, times, jogadoresPorTime);
+    }
+    // Senão, verificar se Padrão 2 é possível  
+    else if (verificarPadrao2(count, numeroTimes)) {
+        console.log('⚠️ Aplicando Padrão 2: 3x4⭐ + 2x3⭐ + 1x(1-2⭐)');
+        mostrarMensagem('🥈 Padrão 2: 3×4⭐ + 2×3⭐ + 1×(1-2⭐)', 'warning');
+        aplicarPadrao2(jogadoresPorNivel, times, jogadoresPorTime);
+    }
+    // Fallback: sorteio equilibrado
+    else {
+        console.log('🔄 Fallback: Aplicando sorteio equilibrado simples');
+        mostrarMensagem('🔄 Fallback: Sorteio equilibrado (padrões indisponíveis)', 'info');
+        aplicarSorteioEquilibrado(jogadoresPorNivel, times, jogadoresPorTime);
+    }
 }
 
 // Verificar se Padrão 1 é possível
@@ -992,6 +1017,7 @@ function mostrarMensagem(mensagem, tipo = 'info') {
     const cores = {
         success: '#28a745',
         error: '#dc3545',
+        warning: '#ffc107',
         info: '#2d8f2d'
     };
     
@@ -1001,8 +1027,8 @@ function mostrarMensagem(mensagem, tipo = 'info') {
         top: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: ${cores[tipo]};
-        color: white;
+        background: ${cores[tipo] || cores.info};
+        color: ${tipo === 'warning' ? '#000' : 'white'};
         padding: 12px 24px;
         border-radius: 12px;
         font-weight: 500;
