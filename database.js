@@ -611,6 +611,82 @@ class Database {
             return { success: false, error };
         }
     }
+
+    // ========== MÉTODOS GENÉRICOS ==========
+    
+    // Buscar todos os registros de uma tabela
+    static async buscarTodos(tabela, opcoes = {}) {
+        try {
+            let query = client.from(tabela).select('*');
+            
+            // Aplicar ordenação se especificada
+            if (opcoes.orderBy) {
+                const ascending = opcoes.orderDirection !== 'desc';
+                query = query.order(opcoes.orderBy, { ascending });
+            }
+            
+            const { data, error } = await query;
+            
+            if (error) throw error;
+            return { success: true, data: data || [] };
+            
+        } catch (error) {
+            console.error(`Erro ao buscar registros da tabela ${tabela}:`, error);
+            return { success: false, error };
+        }
+    }
+    
+    // Inserir registro
+    static async inserir(tabela, dados) {
+        try {
+            const { data, error } = await client
+                .from(tabela)
+                .insert([dados])
+                .select();
+            
+            if (error) throw error;
+            return { success: true, data: data?.[0] };
+            
+        } catch (error) {
+            console.error(`Erro ao inserir registro na tabela ${tabela}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    // Atualizar registro
+    static async atualizar(tabela, id, dados) {
+        try {
+            const { data, error } = await client
+                .from(tabela)
+                .update(dados)
+                .eq('id', id)
+                .select();
+            
+            if (error) throw error;
+            return { success: true, data: data?.[0] };
+            
+        } catch (error) {
+            console.error(`Erro ao atualizar registro na tabela ${tabela}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+    
+    // Excluir registro
+    static async excluir(tabela, id) {
+        try {
+            const { data, error } = await client
+                .from(tabela)
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            return { success: true, data };
+            
+        } catch (error) {
+            console.error(`Erro ao excluir registro da tabela ${tabela}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Exportar para uso global

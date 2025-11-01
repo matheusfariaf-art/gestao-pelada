@@ -24,17 +24,17 @@ function setupEventListeners() {
 // Carregar usuários do banco
 async function carregarUsuarios() {
     try {
-        const { data: usuarios, error } = await client
-            .from('usuarios')
-            .select('*')
-            .order('created_at', { ascending: false });
-            
-        if (error) {
-            console.error('Erro do Supabase:', error);
-            throw error;
+        const resultado = await Database.buscarTodos('usuarios', { 
+            orderBy: 'created_at', 
+            orderDirection: 'desc' 
+        });
+        
+        if (!resultado.success) {
+            console.error('Erro ao buscar usuários:', resultado.error);
+            throw new Error(resultado.error);
         }
         
-        users = usuarios || [];
+        users = resultado.data || [];
         renderizarUsuarios();
         
     } catch (error) {
@@ -133,23 +133,22 @@ async function handleAdicionarUsuario(e) {
     submitBtn.innerHTML = '<span class="emoji">⏳</span><span>Adicionando...</span>';
     
     try {
-        const { data, error } = await client
-            .from('usuarios')
-            .insert([{
-                nome: username, // Usar username como nome também
-                username: username,
-                senha: senha,
-                role: role,
-                ativo: true
-            }])
-            .select();
-            
-        if (error) {
-            if (error.code === '23505') {
+        const novoUsuario = {
+            nome: username, // Usar username como nome também
+            username: username,
+            senha: senha,
+            role: role,
+            ativo: true
+        };
+        
+        const resultado = await Database.inserir('usuarios', novoUsuario);
+        
+        if (!resultado.success) {
+            if (resultado.error && resultado.error.includes('23505')) {
                 mostrarErro('Nome de usuário já existe. Escolha outro.');
                 return;
             }
-            throw error;
+            throw new Error(resultado.error);
         }
         
         mostrarSucesso('✅ Usuário adicionado com sucesso!');
@@ -260,12 +259,11 @@ async function salvarEdicaoUsuario(id) {
             dadosAtualizacao.senha = novaSenha;
         }
         
-        const { error } = await client
-            .from('usuarios')
-            .update(dadosAtualizacao)
-            .eq('id', id);
-            
-        if (error) throw error;
+        const resultado = await Database.atualizar('usuarios', id, dadosAtualizacao);
+        
+        if (!resultado.success) {
+            throw new Error(resultado.error);
+        }
         
         const user = users.find(u => u.id === id);
         const mensagem = novaSenha ? 
@@ -313,12 +311,11 @@ async function excluirUsuario(id) {
     if (!segundaConfirmacao) return;
     
     try {
-        const { error } = await client
-            .from('usuarios')
-            .delete()
-            .eq('id', id);
-            
-        if (error) throw error;
+        const resultado = await Database.excluir('usuarios', id);
+        
+        if (!resultado.success) {
+            throw new Error(resultado.error);
+        }
         
         mostrarSucesso(`✅ Usuário "${user.nome || user.username}" excluído definitivamente!`);
         await carregarUsuarios();
