@@ -590,9 +590,26 @@ class Database {
         return await obterSessaoAtiva();
     }
 
-    // Obter fila (wrapper para função externa)
+    // Obter fila (wrapper para função externa)  
     static async obterFila() {
         return await obterFila();
+    }
+    
+    // Buscar usuário por username
+    static async buscarUsuarioPorUsername(username) {
+        try {
+            const { data, error } = await client
+                .from('usuarios')
+                .select('*')
+                .eq('username', username)
+                .single();
+                
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao buscar usuário por username:', error);
+            return { success: false, error };
+        }
     }
 }
 

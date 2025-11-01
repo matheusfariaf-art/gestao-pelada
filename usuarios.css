@@ -249,22 +249,14 @@ body {
     background: #ffeaa7;
 }
 
-.btn-toggle {
+.btn-delete {
     background: #f8d7da;
     color: #721c24;
 }
 
-.btn-toggle:hover {
+.btn-delete:hover {
     background: #f5c6cb;
-}
-
-.btn-toggle.activate {
-    background: #d4edda;
-    color: #155724;
-}
-
-.btn-toggle.activate:hover {
-    background: #c3e6cb;
+    transform: scale(1.05);
 }
 
 /* Empty State */

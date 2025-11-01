@@ -74,9 +74,8 @@ function renderizarUsuarios() {
                     <button class="user-btn btn-edit" onclick="editarUsuario('${user.id}')">
                         ✏️
                     </button>
-                    <button class="user-btn btn-toggle ${user.ativo ? '' : 'activate'}" 
-                            onclick="alternarStatusUsuario('${user.id}', ${!user.ativo})">
-                        ${user.ativo ? '❌' : '✅'}
+                    <button class="user-btn btn-delete" onclick="excluirUsuario('${user.id}')">
+                        🗑️
                     </button>
                 </div>
             </div>
@@ -179,28 +178,102 @@ async function editarUsuario(id) {
         return;
     }
     
-    const novoNome = prompt(`Editar nome do usuário "${user.nome}":`, user.nome);
-    if (!novoNome || novoNome.trim() === '' || novoNome === user.nome) {
-        return;
-    }
+    // Criar modal de edição
+    const modal = document.createElement('div');
+    modal.id = 'modalEdicaoUsuario';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    `;
     
-    if (novoNome.trim().length < 2) {
+    modal.innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <h3 style="margin: 0 0 20px 0; text-align: center; color: #333;">✏️ Editar Usuário</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Nome:</label>
+                <input type="text" id="editNome" value="${user.nome || user.username}" 
+                       style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box;" />
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Nova Senha:</label>
+                <input type="password" id="editSenha" placeholder="Digite nova senha (deixe vazio para manter atual)" 
+                       style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box;" />
+                <small style="color: #666; font-size: 12px;">Deixe em branco para não alterar a senha</small>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="salvarEdicaoUsuario('${user.id}')" 
+                        style="background: #48bb78; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                    ✅ Salvar
+                </button>
+                <button onclick="fecharModalEdicao()" 
+                        style="background: #e53e3e; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                    ❌ Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Fechar modal ao clicar fora
+    modal.onclick = function(e) {
+        if (e.target === modal) {
+            fecharModalEdicao();
+        }
+    };
+    
+    document.body.appendChild(modal);
+    document.getElementById('editNome').focus();
+}
+
+// Salvar edição do usuário
+async function salvarEdicaoUsuario(id) {
+    const novoNome = document.getElementById('editNome').value.trim();
+    const novaSenha = document.getElementById('editSenha').value.trim();
+    
+    if (!novoNome || novoNome.length < 2) {
         mostrarErro('Nome deve ter pelo menos 2 caracteres.');
         return;
     }
     
     try {
+        const dadosAtualizacao = {
+            nome: novoNome,
+            updated_at: new Date().toISOString()
+        };
+        
+        // Se senha foi informada, incluir na atualização
+        if (novaSenha) {
+            if (novaSenha.length < 3) {
+                mostrarErro('Senha deve ter pelo menos 3 caracteres.');
+                return;
+            }
+            dadosAtualizacao.senha = novaSenha;
+        }
+        
         const { error } = await client
             .from('usuarios')
-            .update({ 
-                nome: novoNome.trim(),
-                updated_at: new Date().toISOString()
-            })
+            .update(dadosAtualizacao)
             .eq('id', id);
             
         if (error) throw error;
         
-        mostrarSucesso('✅ Nome do usuário atualizado!');
+        const user = users.find(u => u.id === id);
+        const mensagem = novaSenha ? 
+            `✅ Nome e senha de "${user.nome || user.username}" atualizados!` : 
+            `✅ Nome de "${user.nome || user.username}" atualizado!`;
+            
+        mostrarSucesso(mensagem);
+        fecharModalEdicao();
         await carregarUsuarios();
         
     } catch (error) {
@@ -209,43 +282,50 @@ async function editarUsuario(id) {
     }
 }
 
-// Alternar status do usuário
-async function alternarStatusUsuario(id, novoStatus) {
+// Fechar modal de edição
+function fecharModalEdicao() {
+    const modal = document.getElementById('modalEdicaoUsuario');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Excluir usuário definitivamente
+async function excluirUsuario(id) {
     const user = users.find(u => u.id === id);
     if (!user) {
         mostrarErro('Usuário não encontrado.');
         return;
     }
     
-    // Prevenir auto-desativação do próprio admin
+    // Prevenir auto-exclusão do próprio admin
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-    if (user.id === currentUser.id && !novoStatus) {
-        mostrarErro('Você não pode desativar sua própria conta.');
+    if (user.id === currentUser.id) {
+        mostrarErro('Você não pode excluir sua própria conta.');
         return;
     }
     
-    const acao = novoStatus ? 'ativar' : 'desativar';
-    const confirmacao = confirm(`Tem certeza que deseja ${acao} o usuário "${user.nome}"?`);
+    const confirmacao = confirm(`⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR DEFINITIVAMENTE o usuário "${user.nome || user.username}"?\n\nEsta ação NÃO PODE ser desfeita!`);
     if (!confirmacao) return;
+    
+    // Segunda confirmação para segurança
+    const segundaConfirmacao = confirm(`🚨 ÚLTIMA CONFIRMAÇÃO:\n\nExcluir usuário "${user.nome || user.username}" PERMANENTEMENTE?\n\nDigite OK para confirmar ou Cancelar para desistir.`);
+    if (!segundaConfirmacao) return;
     
     try {
         const { error } = await client
             .from('usuarios')
-            .update({ 
-                ativo: novoStatus,
-                updated_at: new Date().toISOString()
-            })
+            .delete()
             .eq('id', id);
             
         if (error) throw error;
         
-        const status = novoStatus ? 'ativado' : 'desativado';
-        mostrarSucesso(`✅ Usuário ${status} com sucesso!`);
+        mostrarSucesso(`✅ Usuário "${user.nome || user.username}" excluído definitivamente!`);
         await carregarUsuarios();
         
     } catch (error) {
-        console.error('Erro ao alterar status:', error);
-        mostrarErro('Erro ao alterar status do usuário.');
+        console.error('Erro ao excluir usuário:', error);
+        mostrarErro('Erro ao excluir usuário. Verifique as permissões.');
     }
 }
 

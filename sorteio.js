@@ -1326,39 +1326,60 @@ async function solicitarSenhaIniciarPelada() {
                 }
                 
                 // Para outros usuários, verificar no banco
-                const { data, error } = await supabase
-                    .from('usuarios')
-                    .select('senha')
-                    .eq('username', username)
-                    .single();
-
-                if (error) {
-                    console.error('Erro ao buscar senha:', error);
-                    alert('Erro ao verificar credenciais');
+                try {
+                    if (typeof Database === 'undefined') {
+                        console.error('Database não encontrado');
+                        alert('Erro: Sistema de banco não carregado');
+                        document.body.removeChild(modal);
+                        resolve(false);
+                        return;
+                    }
+                    
+                    // Buscar o usuário pelo username
+                    const resultado = await Database.buscarUsuarioPorUsername(username);
+                    
+                    if (!resultado.success) {
+                        console.error('Erro ao buscar usuário:', resultado.error);
+                        alert('Erro ao verificar credenciais');
+                        document.body.removeChild(modal);
+                        resolve(false);
+                        return;
+                    }
+                    
+                    if (!resultado.data) {
+                        console.error('Usuário não encontrado');
+                        alert('Usuário não encontrado');
+                        document.body.removeChild(modal);
+                        resolve(false);
+                        return;
+                    }
+                    
+                    const senhaCorreta = resultado.data.senha;
+                    
+                    // Verificar se a senha está correta
+                    if (senhaDigitada === senhaCorreta) {
+                        document.body.removeChild(modal);
+                        resolve(true);
+                    } else {
+                        // Senha incorreta - mostrar erro
+                        inputSenha.style.borderColor = '#ff4444';
+                        inputSenha.style.backgroundColor = '#fff5f5';
+                        inputSenha.value = '';
+                        inputSenha.placeholder = '❌ Senha incorreta - Digite sua senha de usuário';
+                        inputSenha.focus();
+                        
+                        // Resetar estilo após 3 segundos
+                        setTimeout(() => {
+                            inputSenha.style.borderColor = '';
+                            inputSenha.style.backgroundColor = '';
+                            inputSenha.placeholder = 'Digite sua senha';
+                        }, 3000);
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar senha:', error);
+                    alert('Erro de conexão com o banco');
                     document.body.removeChild(modal);
                     resolve(false);
-                    return;
-                }
-
-                const senhaCorreta = data?.senha;
-                
-                if (senhaDigitada === senhaCorreta) {
-                    document.body.removeChild(modal);
-                    resolve(true);
-                } else {
-                    // Senha incorreta - mostrar erro
-                    inputSenha.style.borderColor = '#ff4444';
-                    inputSenha.style.backgroundColor = '#fff5f5';
-                    inputSenha.value = '';
-                    inputSenha.placeholder = '❌ Senha incorreta - Digite sua senha de usuário';
-                    inputSenha.focus();
-                    
-                    // Resetar estilo após 3 segundos
-                    setTimeout(() => {
-                        inputSenha.style.borderColor = '';
-                        inputSenha.style.backgroundColor = '';
-                        inputSenha.placeholder = 'Digite sua senha';
-                    }, 3000);
                 }
             } catch (error) {
                 console.error('Erro ao conectar com banco:', error);

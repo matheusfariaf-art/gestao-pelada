@@ -166,10 +166,10 @@ function redirectToHome() {
             window.location.href = 'index.html'; // Admin pode acessar tudo
             break;
         case 'organizer':
-            window.location.href = 'fila.html'; // Organizador vai direto para fila
+            window.location.href = 'index.html'; // Organizador vai para home
             break;
         case 'player':
-            window.location.href = 'fila.html'; // Jogador também vai para fila
+            window.location.href = 'fila.html'; // Jogador vai para fila
             break;
         default:
             window.location.href = 'index.html';
