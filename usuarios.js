@@ -2,17 +2,23 @@
 let users = [];
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-    // Verificar se é admin
-    const currentUser = requireAuth();
-    if (currentUser && !hasPermission('admin')) {
-        alert('❌ Apenas administradores podem gerenciar usuários.');
-        window.location.href = 'index.html';
-        return;
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Verificar se é admin
+        const currentUser = requireAuth();
+        if (currentUser && !hasPermission('admin')) {
+            alert('❌ Apenas administradores podem gerenciar usuários.');
+            window.location.href = 'index.html';
+            return;
+        }
+        
+        setupEventListeners();
+        await carregarUsuarios();
+        
+    } catch (error) {
+        console.error('Erro na inicialização:', error);
+        mostrarErro('Erro ao inicializar página de usuários.');
     }
-    
-    setupEventListeners();
-    carregarUsuarios();
 });
 
 // Configurar event listeners
@@ -24,17 +30,44 @@ function setupEventListeners() {
 // Carregar usuários do banco
 async function carregarUsuarios() {
     try {
-        const resultado = await Database.buscarTodos('usuarios', { 
-            orderBy: 'created_at', 
-            orderDirection: 'desc' 
-        });
-        
-        if (!resultado.success) {
-            console.error('Erro ao buscar usuários:', resultado.error);
-            throw new Error(resultado.error);
+        // Tentar usar a classe Database primeiro
+        if (typeof Database !== 'undefined') {
+            const resultado = await Database.buscarTodos('usuarios', { 
+                orderBy: 'id', 
+                orderDirection: 'desc' 
+            });
+            
+            if (resultado.success) {
+                users = resultado.data || [];
+                renderizarUsuarios();
+                return;
+            } else {
+                console.error('Erro na classe Database:', resultado.error);
+            }
         }
         
-        users = resultado.data || [];
+        // Fallback: usar Supabase diretamente
+        console.log('Usando Supabase diretamente como fallback...');
+        
+        // Inicializar Supabase se necessário
+        if (typeof supabase === 'undefined') {
+            window.supabase = createClient(
+                'https://hsimtctqslplhcxrvbvt.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzaW10Y3Rxc2xwbGhjeHJ2YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA1NzUwMzUsImV4cCI6MjA0NjE1MTAzNX0.7NqKAGhLGcpqWl-Gf2KowdAB4Ml0G9rXFDXGXxwYJR8'
+            );
+        }
+        
+        const { data: usuarios, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .order('id', { ascending: false });
+            
+        if (error) {
+            console.error('Erro do Supabase:', error);
+            throw error;
+        }
+        
+        users = usuarios || [];
         renderizarUsuarios();
         
     } catch (error) {

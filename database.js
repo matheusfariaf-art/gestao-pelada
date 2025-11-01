@@ -617,6 +617,14 @@ class Database {
     // Buscar todos os registros de uma tabela
     static async buscarTodos(tabela, opcoes = {}) {
         try {
+            // Garantir que o client está inicializado
+            if (!client) {
+                client = initializeSupabase();
+                if (!client) {
+                    throw new Error('Não foi possível inicializar o Supabase');
+                }
+            }
+            
             let query = client.from(tabela).select('*');
             
             // Aplicar ordenação se especificada
@@ -632,13 +640,21 @@ class Database {
             
         } catch (error) {
             console.error(`Erro ao buscar registros da tabela ${tabela}:`, error);
-            return { success: false, error };
+            return { success: false, error: error.message || error };
         }
     }
     
     // Inserir registro
     static async inserir(tabela, dados) {
         try {
+            // Garantir que o client está inicializado
+            if (!client) {
+                client = initializeSupabase();
+                if (!client) {
+                    throw new Error('Não foi possível inicializar o Supabase');
+                }
+            }
+            
             const { data, error } = await client
                 .from(tabela)
                 .insert([dados])
@@ -649,13 +665,21 @@ class Database {
             
         } catch (error) {
             console.error(`Erro ao inserir registro na tabela ${tabela}:`, error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.message || error };
         }
     }
     
     // Atualizar registro
     static async atualizar(tabela, id, dados) {
         try {
+            // Garantir que o client está inicializado
+            if (!client) {
+                client = initializeSupabase();
+                if (!client) {
+                    throw new Error('Não foi possível inicializar o Supabase');
+                }
+            }
+            
             const { data, error } = await client
                 .from(tabela)
                 .update(dados)
@@ -667,13 +691,21 @@ class Database {
             
         } catch (error) {
             console.error(`Erro ao atualizar registro na tabela ${tabela}:`, error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.message || error };
         }
     }
     
     // Excluir registro
     static async excluir(tabela, id) {
         try {
+            // Garantir que o client está inicializado
+            if (!client) {
+                client = initializeSupabase();
+                if (!client) {
+                    throw new Error('Não foi possível inicializar o Supabase');
+                }
+            }
+            
             const { data, error } = await client
                 .from(tabela)
                 .delete()
@@ -684,7 +716,7 @@ class Database {
             
         } catch (error) {
             console.error(`Erro ao excluir registro da tabela ${tabela}:`, error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.message || error };
         }
     }
 }
