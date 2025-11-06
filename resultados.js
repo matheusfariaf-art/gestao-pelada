@@ -597,20 +597,48 @@ if (btnConfirmarApagar) {
 // Buscar datas disponíveis no banco
 async function buscarDatasDisponiveis() {
     try {
-        const result = await Database.buscarTodos('sessoes', {
-            orderBy: 'data_sessao',
-            orderDirection: 'desc'
-        });
+        console.log('🔍 Buscando datas disponíveis...');
         
-        if (result.success && result.data) {
-            // Extrair datas únicas
-            const datas = [...new Set(result.data.map(sessao => sessao.data_sessao))];
-            return datas;
+        // Garantir que o Supabase está disponível
+        if (typeof supabase === 'undefined') {
+            console.error('❌ Supabase não está carregado');
+            return [];
         }
         
-        return [];
+        // Criar cliente Supabase
+        const client = supabase.createClient(
+            'https://wflcddqgnspqnvdsvojs.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmbGNkZHFnbnNwcW52ZHN2b2pzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNzA4NTEsImV4cCI6MjA3Njc0Njg1MX0.tYhUsiY7vp93O69JXhiayOjsP7PObcQ7EYKNVj5fjwQ'
+        );
+        
+        console.log('📡 Cliente Supabase criado');
+        
+        // Buscar sessões
+        const { data, error } = await client
+            .from('sessoes')
+            .select('data')
+            .order('data', { ascending: false });
+        
+        if (error) {
+            console.error('❌ Erro ao buscar sessões:', error);
+            return [];
+        }
+        
+        console.log('📊 Dados das sessões:', data);
+        
+        if (!data || data.length === 0) {
+            console.log('📋 Nenhuma sessão encontrada');
+            return [];
+        }
+        
+        // Extrair datas únicas
+        const datas = [...new Set(data.map(sessao => sessao.data))];
+        console.log('📅 Datas únicas extraídas:', datas);
+        
+        return datas;
+        
     } catch (error) {
-        console.error('Erro ao buscar datas:', error);
+        console.error('❌ Erro ao buscar datas:', error);
         return [];
     }
 }
@@ -619,7 +647,10 @@ async function buscarDatasDisponiveis() {
 async function popularSelectDatas() {
     const selectData = document.getElementById('data-apagar');
     
-    if (!selectData) return;
+    if (!selectData) {
+        console.error('❌ Elemento select não encontrado!');
+        return;
+    }
     
     // Limpar opções existentes
     selectData.innerHTML = '<option value="">Carregando datas...</option>';
@@ -653,9 +684,10 @@ async function popularSelectDatas() {
         });
         
         selectData.disabled = false;
+        console.log(`✅ Select populado com ${datas.length} datas`);
         
     } catch (error) {
-        console.error('Erro ao popular select de datas:', error);
+        console.error('❌ Erro ao popular select de datas:', error);
         selectData.innerHTML = '<option value="">Erro ao carregar datas</option>';
         selectData.disabled = true;
     }
@@ -736,7 +768,7 @@ async function executarApagarDados() {
             fecharModalApagarDia();
             
             // Mostrar confirmação
-            alert(`✅ Dados de ${formatarData(dataSelecionada)} foram apagados com sucesso!\n\n📊 Dados removidos:\n• ${resultado.partidasApagadas || 0} partidas\n• ${resultado.golsApagados || 0} gols\n• ${resultado.estatisticasApagadas || 0} registros de estatísticas`);
+            alert(`✅ Dados de ${formatarData(dataSelecionada)} foram apagados com sucesso!\n\n📊 Dados removidos:\n• ${resultado.sessoesRemovidas || 0} sessões\n• ${resultado.jogosRemovidos || 0} partidas\n• Todos os gols e registros da fila`);
             
             // Recarregar dados da tela
             await carregarDados();
@@ -760,3 +792,39 @@ function formatarData(dataString) {
     const data = new Date(dataString + 'T00:00:00');
     return data.toLocaleDateString('pt-BR');
 }
+
+// Função para criar sessão de teste (apenas para debug)
+async function criarSessaoTeste() {
+    try {
+        console.log('🧪 Criando sessão de teste...');
+        
+        const hoje = new Date().toISOString().split('T')[0];
+        
+        // Criar objeto com dados da sessão
+        const dadosSessao = {
+            data: hoje,
+            status: 'ativa',
+            total_jogadores: 0
+        };
+        
+        const resultado = await Database.criarSessao(dadosSessao);
+        
+        if (resultado.success) {
+            console.log('✅ Sessão de teste criada:', resultado.data);
+            alert('✅ Sessão de teste criada com sucesso!');
+            
+            // Recarregar dados
+            await carregarDados();
+        } else {
+            console.error('❌ Erro ao criar sessão:', resultado.error);
+            alert(`❌ Erro ao criar sessão de teste: ${resultado.error}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao criar sessão de teste:', error);
+        alert(`❌ Erro ao criar sessão de teste: ${error.message}`);
+    }
+}
+
+// Adicionar função global para o botão
+window.criarSessaoTeste = criarSessaoTeste;

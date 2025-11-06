@@ -762,7 +762,7 @@ class Database {
             const { data: sessoes, error: errorSessoes } = await client
                 .from('sessoes')
                 .select('id')
-                .eq('data_sessao', data);
+                .eq('data', data);
                 
             if (errorSessoes) throw errorSessoes;
             
@@ -814,16 +814,7 @@ class Database {
             if (errorFila) throw errorFila;
             console.log('🗑️ Registros da fila removidos');
 
-            // 6. Apagar estatísticas dos jogadores do dia
-            const { error: errorStats } = await client
-                .from('estatisticas_jogadores')
-                .delete()
-                .in('sessao_id', sessoesIds);
-                
-            if (errorStats) throw errorStats;
-            console.log('🗑️ Estatísticas removidas');
-
-            // 7. Apagar sessões
+            // 6. Apagar sessões
             const { error: errorDelSessoes } = await client
                 .from('sessoes')
                 .delete()

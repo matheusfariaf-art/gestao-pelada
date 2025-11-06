@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Dados</title>
+</head>
+<body>
+    <h1>Teste de Dados do Banco</h1>
+    <button onclick="testarDados()">Testar Dados</button>
+    <div id="resultado"></div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://wflcddqgnspqnvdsvojs.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmbGNkZHFnbnNwcW52ZHN2b2pzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNzA4NTEsImV4cCI6MjA3Njc0Njg1MX0.tYhUsiY7vp93O69JXhiayOjsP7PObcQ7EYKNVj5fjwQ'
+        
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function testarDados() {
+            const resultado = document.getElementById('resultado');
+            resultado.innerHTML = 'Testando...';
+
+            try {
+                // Testar sessões
+                const { data: sessoes, error: errorSessoes } = await client
+                    .from('sessoes')
+                    .select('*')
+                    .order('data_sessao', { ascending: false });
+
+                if (errorSessoes) {
+                    resultado.innerHTML = `<p style="color: red;">Erro ao buscar sessões: ${errorSessoes.message}</p>`;
+                    return;
+                }
+
+                console.log('Sessões encontradas:', sessoes);
+
+                if (!sessoes || sessoes.length === 0) {
+                    resultado.innerHTML = '<p style="color: orange;">Nenhuma sessão encontrada na tabela.</p>';
+                    return;
+                }
+
+                let html = `<h2>Sessões encontradas: ${sessoes.length}</h2><ul>`;
+                sessoes.forEach(sessao => {
+                    html += `<li>ID: ${sessao.id}, Data: ${sessao.data_sessao}, Status: ${sessao.status}</li>`;
+                });
+                html += '</ul>';
+
+                // Testar jogos
+                const { data: jogos, error: errorJogos } = await client
+                    .from('jogos')
+                    .select('*')
+                    .limit(5);
+
+                if (!errorJogos && jogos) {
+                    html += `<h2>Jogos encontrados: ${jogos.length}</h2>`;
+                }
+
+                resultado.innerHTML = html;
+
+            } catch (error) {
+                console.error('Erro no teste:', error);
+                resultado.innerHTML = `<p style="color: red;">Erro: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

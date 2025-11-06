@@ -1214,13 +1214,13 @@ body {
     }
     
     .teams-cards {
-        grid-template-columns: 1fr;
-        gap: 10px;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
         margin-bottom: 15px;
     }
     
     .team-card {
-        padding: 10px;
+        padding: 8px;
         min-height: 180px;
         max-height: 250px;
     }

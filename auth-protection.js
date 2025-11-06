@@ -154,7 +154,13 @@ function checkPageAccess(role, isGuest = false) {
     if (!allowedPages.includes(currentPage)) {
         const userType = isGuest ? '👀 Visitante' : getRoleDisplayName(role);
         alert(`❌ Você não tem permissão para acessar esta página.\nSeu nível: ${userType}`);
-        window.location.href = 'index.html';
+        
+        // Redirecionar visitantes para resultados, outros para index
+        if (isGuest) {
+            window.location.href = 'resultados.html';
+        } else {
+            window.location.href = 'index.html';
+        }
         return false;
     }
     
@@ -218,6 +224,43 @@ function applyRoleRestrictions(role, isGuest = false) {
                 el.disabled = true;
             }
         });
+    });
+    
+    // Configurar navegação específica para visitantes
+    if (isGuest) {
+        setupGuestNavigation();
+    }
+}
+
+// Configurar navegação específica para visitantes
+function setupGuestNavigation() {
+    // Ajustar navegação mobile
+    const navMobile = document.querySelector('.nav-mobile');
+    if (navMobile) {
+        // Remover links não permitidos para visitantes
+        const guestAllowedPages = ['resultados.html', 'fila.html', 'estatisticas.html'];
+        
+        // Esconder navegação para páginas não permitidas
+        navMobile.querySelectorAll('a.nav-item').forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && !guestAllowedPages.some(page => href.includes(page))) {
+                // Em vez de esconder, desabilitar o link
+                link.style.opacity = '0.3';
+                link.style.pointerEvents = 'none';
+                link.title = 'Acesso restrito para visitantes';
+            }
+        });
+        
+        // Esconder botões administrativos
+        navMobile.querySelectorAll('.admin-btn').forEach(btn => {
+            btn.style.display = 'none';
+        });
+    }
+    
+    // Modificar link "Home" para apontar para resultados
+    document.querySelectorAll('a[href="index.html"]').forEach(link => {
+        link.href = 'resultados.html';
+        link.title = 'Página inicial (Resultados)';
     });
 }
 

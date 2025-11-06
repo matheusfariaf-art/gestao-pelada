@@ -280,8 +280,8 @@ function entrarComoVisitante() {
         authState.currentUser = visitanteUser;
         authState.isLoggedIn = true;
         
-        // Redirecionar para a página inicial
-        window.location.href = 'index.html';
+        // Redirecionar visitante para a página de resultados (home do visitante)
+        window.location.href = 'resultados.html';
         
     } catch (error) {
         console.error('Erro ao entrar como visitante:', error);
