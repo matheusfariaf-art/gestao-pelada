@@ -259,3 +259,32 @@ function hasPermission(requiredRole) {
     
     return userLevel >= requiredLevel;
 }
+
+// Função para entrar como visitante
+function entrarComoVisitante() {
+    try {
+        // Criar usuário visitante temporário
+        const visitanteUser = {
+            id: 'guest_' + Date.now(),
+            username: 'visitante',
+            nome: 'Visitante',
+            role: 'player',
+            isGuest: true,
+            loginTime: new Date().toISOString()
+        };
+        
+        // Salvar no localStorage
+        localStorage.setItem('pelada3_user', JSON.stringify(visitanteUser));
+        
+        // Atualizar estado de autenticação
+        authState.currentUser = visitanteUser;
+        authState.isLoggedIn = true;
+        
+        // Redirecionar para a página inicial
+        window.location.href = 'index.html';
+        
+    } catch (error) {
+        console.error('Erro ao entrar como visitante:', error);
+        showError('Erro interno. Tente novamente.');
+    }
+}

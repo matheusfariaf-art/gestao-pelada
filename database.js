@@ -414,6 +414,31 @@ class Database {
         }
     }
 
+    // Registrar gol contra (sem jogador específico)
+    static async registrarGolContra(dadosGolContra) {
+        try {
+            const golContra = {
+                jogo_id: dadosGolContra.jogo_id,
+                jogador_id: null, // Gol contra não tem jogador específico
+                time: dadosGolContra.time_beneficiado, // Time que recebeu o ponto
+                gol_contra: true,
+                time_gol_contra: dadosGolContra.time_gol_contra,
+                observacoes: `Gol contra do Time ${dadosGolContra.time_gol_contra}`
+            };
+            
+            const { data, error } = await client
+                .from('gols')
+                .insert([golContra])
+                .select()
+            
+            if (error) throw error
+            return { success: true, data }
+        } catch (error) {
+            console.error('Erro ao registrar gol contra:', error)
+            return { success: false, error: error.message }
+        }
+    }
+
     // Buscar gols por jogo
     static async buscarGolsPorJogo(jogoId) {
         try {
@@ -716,6 +741,107 @@ class Database {
             
         } catch (error) {
             console.error(`Erro ao excluir registro da tabela ${tabela}:`, error);
+            return { success: false, error: error.message || error };
+        }
+    }
+
+    // Apagar dados de um dia específico (administrativo)
+    static async apagarDadosDoDia(data) {
+        try {
+            // Garantir que o client está inicializado
+            if (!client) {
+                client = initializeSupabase();
+                if (!client) {
+                    throw new Error('Não foi possível inicializar o Supabase');
+                }
+            }
+
+            console.log(`🗑️ Iniciando exclusão de dados do dia: ${data}`);
+            
+            // 1. Buscar sessões do dia
+            const { data: sessoes, error: errorSessoes } = await client
+                .from('sessoes')
+                .select('id')
+                .eq('data_sessao', data);
+                
+            if (errorSessoes) throw errorSessoes;
+            
+            if (!sessoes || sessoes.length === 0) {
+                console.log('📋 Nenhuma sessão encontrada para este dia');
+                return { success: true, message: 'Nenhuma sessão encontrada para este dia' };
+            }
+
+            const sessoesIds = sessoes.map(s => s.id);
+            console.log(`📋 Encontradas ${sessoes.length} sessões: ${sessoesIds.join(', ')}`);
+
+            // 2. Buscar jogos das sessões
+            const { data: jogos, error: errorJogos } = await client
+                .from('jogos')
+                .select('id')
+                .in('sessao_id', sessoesIds);
+                
+            if (errorJogos) throw errorJogos;
+
+            if (jogos && jogos.length > 0) {
+                const jogosIds = jogos.map(j => j.id);
+                console.log(`⚽ Encontrados ${jogos.length} jogos: ${jogosIds.join(', ')}`);
+
+                // 3. Apagar gols dos jogos
+                const { error: errorGols } = await client
+                    .from('gols')
+                    .delete()
+                    .in('jogo_id', jogosIds);
+                    
+                if (errorGols) throw errorGols;
+                console.log('🗑️ Gols removidos');
+
+                // 4. Apagar jogos
+                const { error: errorDelJogos } = await client
+                    .from('jogos')
+                    .delete()
+                    .in('id', jogosIds);
+                    
+                if (errorDelJogos) throw errorDelJogos;
+                console.log('🗑️ Jogos removidos');
+            }
+
+            // 5. Apagar fila das sessões
+            const { error: errorFila } = await client
+                .from('fila')
+                .delete()
+                .in('sessao_id', sessoesIds);
+                
+            if (errorFila) throw errorFila;
+            console.log('🗑️ Registros da fila removidos');
+
+            // 6. Apagar estatísticas dos jogadores do dia
+            const { error: errorStats } = await client
+                .from('estatisticas_jogadores')
+                .delete()
+                .in('sessao_id', sessoesIds);
+                
+            if (errorStats) throw errorStats;
+            console.log('🗑️ Estatísticas removidas');
+
+            // 7. Apagar sessões
+            const { error: errorDelSessoes } = await client
+                .from('sessoes')
+                .delete()
+                .in('id', sessoesIds);
+                
+            if (errorDelSessoes) throw errorDelSessoes;
+            console.log('🗑️ Sessões removidas');
+
+            console.log('✅ Todos os dados do dia foram removidos com sucesso');
+            return { 
+                success: true, 
+                message: `Dados do dia ${data} removidos com sucesso`,
+                sessoesRemovidas: sessoes.length,
+                jogosRemovidos: jogos ? jogos.length : 0
+            };
+
+        } catch (error) {
+            console.error('❌ Erro ao apagar dados do dia:', error);
             return { success: false, error: error.message || error };
         }
     }

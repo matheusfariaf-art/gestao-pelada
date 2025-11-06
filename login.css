@@ -278,6 +278,65 @@ body {
 }
 
 .role-player {
-    color: #2d8f2d;
+    color: #388e3c;
     font-weight: bold;
+}
+
+/* Acesso de Visitante */
+.guest-access {
+    margin-top: 20px;
+}
+
+.divider {
+    text-align: center;
+    position: relative;
+    margin: 20px 0;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #e1e5e9;
+}
+
+.divider span {
+    background: white;
+    color: #666;
+    padding: 0 15px;
+    font-size: 0.9rem;
+}
+
+.guest-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.guest-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(108, 92, 231, 0.3);
+}
+
+.guest-btn .emoji {
+    font-size: 1.3rem;
+}
+
+.guest-btn small {
+    font-size: 0.8rem;
+    opacity: 0.9;
+    font-weight: normal;
 }

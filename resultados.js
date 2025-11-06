@@ -568,3 +568,195 @@ async function mostrarModalGols() {
     lista.innerHTML = html;
     modal.style.display = 'flex';
 }
+
+// ================================
+// FUNÇÃO ADMINISTRATIVA - APAGAR DADOS DO DIA
+// ================================
+
+// Elementos do modal de apagar dados
+const btnApagarDia = document.getElementById('btn-apagar-dia');
+const modalApagarDia = document.getElementById('modal-apagar-dia');
+const dataApagar = document.getElementById('data-apagar');
+const confirmacaoTexto = document.getElementById('confirmacao-texto');
+const btnCancelarApagar = document.getElementById('cancelar-apagar');
+const btnConfirmarApagar = document.getElementById('confirmar-apagar');
+
+// Event listeners
+if (btnApagarDia) {
+    btnApagarDia.addEventListener('click', mostrarModalApagarDia);
+}
+
+if (btnCancelarApagar) {
+    btnCancelarApagar.addEventListener('click', fecharModalApagarDia);
+}
+
+if (btnConfirmarApagar) {
+    btnConfirmarApagar.addEventListener('click', executarApagarDados);
+}
+
+// Buscar datas disponíveis no banco
+async function buscarDatasDisponiveis() {
+    try {
+        const result = await Database.buscarTodos('sessoes', {
+            orderBy: 'data_sessao',
+            orderDirection: 'desc'
+        });
+        
+        if (result.success && result.data) {
+            // Extrair datas únicas
+            const datas = [...new Set(result.data.map(sessao => sessao.data_sessao))];
+            return datas;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('Erro ao buscar datas:', error);
+        return [];
+    }
+}
+
+// Popular o select de datas
+async function popularSelectDatas() {
+    const selectData = document.getElementById('data-apagar');
+    
+    if (!selectData) return;
+    
+    // Limpar opções existentes
+    selectData.innerHTML = '<option value="">Carregando datas...</option>';
+    selectData.disabled = true;
+    
+    try {
+        const datas = await buscarDatasDisponiveis();
+        
+        // Limpar novamente
+        selectData.innerHTML = '';
+        
+        if (datas.length === 0) {
+            selectData.innerHTML = '<option value="">Nenhuma data encontrada</option>';
+            selectData.disabled = true;
+            return;
+        }
+        
+        // Adicionar opção padrão
+        selectData.innerHTML = '<option value="">Selecione uma data...</option>';
+        
+        // Adicionar opções de datas
+        datas.forEach(data => {
+            const option = document.createElement('option');
+            option.value = data;
+            
+            // Formatar data para exibição
+            const dataFormatada = new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+            option.textContent = dataFormatada;
+            
+            selectData.appendChild(option);
+        });
+        
+        selectData.disabled = false;
+        
+    } catch (error) {
+        console.error('Erro ao popular select de datas:', error);
+        selectData.innerHTML = '<option value="">Erro ao carregar datas</option>';
+        selectData.disabled = true;
+    }
+}
+
+if (confirmacaoTexto) {
+    confirmacaoTexto.addEventListener('input', validarConfirmacao);
+}
+
+// Função para mostrar modal
+function mostrarModalApagarDia() {
+    // Popular as datas disponíveis
+    popularSelectDatas();
+    
+    // Limpar confirmação
+    confirmacaoTexto.value = '';
+    btnConfirmarApagar.disabled = true;
+    
+    // Mostrar modal
+    modalApagarDia.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Função para fechar modal
+function fecharModalApagarDia() {
+    modalApagarDia.style.display = 'none';
+    document.body.style.overflow = '';
+    
+    // Limpar campos
+    dataApagar.value = '';
+    dataApagar.innerHTML = '<option value="">Selecione uma data...</option>';
+    confirmacaoTexto.value = '';
+    btnConfirmarApagar.disabled = true;
+}
+
+// Validar confirmação
+function validarConfirmacao() {
+    const textoDigitado = confirmacaoTexto.value.trim().toUpperCase();
+    const textoCorreto = 'APAGAR';
+    
+    if (textoDigitado === textoCorreto) {
+        btnConfirmarApagar.disabled = false;
+        btnConfirmarApagar.style.background = '#dc3545';
+    } else {
+        btnConfirmarApagar.disabled = true;
+        btnConfirmarApagar.style.background = '#ccc';
+    }
+}
+
+// Executar exclusão dos dados
+async function executarApagarDados() {
+    const dataSelecionada = dataApagar.value;
+    
+    if (!dataSelecionada) {
+        alert('⚠️ Selecione uma data válida!');
+        return;
+    }
+    
+    if (confirmacaoTexto.value.trim().toUpperCase() !== 'APAGAR') {
+        alert('⚠️ Digite "APAGAR" para confirmar!');
+        return;
+    }
+    
+    try {
+        // Mostrar loading
+        btnConfirmarApagar.innerHTML = '<span class="emoji">⏳</span><span>Apagando...</span>';
+        btnConfirmarApagar.disabled = true;
+        
+        console.log(`🗑️ Iniciando exclusão de dados do dia: ${dataSelecionada}`);
+        
+        // Chamar função do banco para apagar dados do dia
+        const resultado = await Database.apagarDadosDoDia(dataSelecionada);
+        
+        if (resultado.success) {
+            console.log('✅ Dados apagados com sucesso:', resultado);
+            
+            // Fechar modal
+            fecharModalApagarDia();
+            
+            // Mostrar confirmação
+            alert(`✅ Dados de ${formatarData(dataSelecionada)} foram apagados com sucesso!\n\n📊 Dados removidos:\n• ${resultado.partidasApagadas || 0} partidas\n• ${resultado.golsApagados || 0} gols\n• ${resultado.estatisticasApagadas || 0} registros de estatísticas`);
+            
+            // Recarregar dados da tela
+            await carregarDados();
+            
+        } else {
+            throw new Error(resultado.error || 'Erro desconhecido');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao apagar dados:', error);
+        alert(`❌ Erro ao apagar dados: ${error.message}`);
+        
+        // Restaurar botão
+        btnConfirmarApagar.innerHTML = '<span class="emoji">🗑️</span><span>Apagar Dados</span>';
+        btnConfirmarApagar.disabled = false;
+    }
+}
+
+// Função auxiliar para formatar data
+function formatarData(dataString) {
+    const data = new Date(dataString + 'T00:00:00');
+    return data.toLocaleDateString('pt-BR');
+}

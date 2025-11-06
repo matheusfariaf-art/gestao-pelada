@@ -35,22 +35,35 @@ function irParaJogo() {
 // Carregar status da pelada
 async function carregarStatusPelada() {
     try {
+        // Verificar se os elementos existem antes de tentar atualizá-los
+        const totalJogadoresEl = document.getElementById('total-jogadores');
+        const jogoAtualEl = document.getElementById('jogo-atual');
+        const vitoriasConsecutivasEl = document.getElementById('vitorias-consecutivas');
+        
+        // Se nenhum elemento existe, sair silenciosamente
+        if (!totalJogadoresEl && !jogoAtualEl && !vitoriasConsecutivasEl) {
+            return;
+        }
+        
         // Buscar sessão ativa
-        const { data: sessaoAtiva } = await Database.buscarSessaoAtiva();
+        const resultadoSessao = await Database.buscarSessaoAtiva();
+        const sessaoAtiva = resultadoSessao?.data || resultadoSessao;
         
         if (!sessaoAtiva) {
-            document.getElementById('total-jogadores').textContent = '0';
-            document.getElementById('jogo-atual').textContent = 'Nenhum';
-            document.getElementById('vitorias-consecutivas').textContent = '0';
+            if (totalJogadoresEl) totalJogadoresEl.textContent = '0';
+            if (jogoAtualEl) jogoAtualEl.textContent = 'Nenhum';
+            if (vitoriasConsecutivasEl) vitoriasConsecutivasEl.textContent = '0';
             return;
         }
 
         // Buscar jogadores na fila da sessão ativa
-        const { data: fila } = await Database.buscarFilaPorSessao(sessaoAtiva.id);
+        const resultadoFila = await Database.buscarFilaPorSessao(sessaoAtiva.id);
+        const fila = resultadoFila?.data || resultadoFila;
         const jogadoresNaFila = fila ? fila.filter(j => j.status === 'fila').length : 0;
         
         // Buscar jogo em andamento
-        const { data: jogoAtivo } = await Database.buscarJogoAtivo(sessaoAtiva.id);
+        const resultadoJogo = await Database.buscarJogoAtivo(sessaoAtiva.id);
+        const jogoAtivo = resultadoJogo?.data || resultadoJogo;
         
         // Calcular vitórias consecutivas máximas
         let vitoriasConsecutivas = 0;
@@ -58,10 +71,7 @@ async function carregarStatusPelada() {
             vitoriasConsecutivas = Math.max(...fila.map(j => j.vitorias_consecutivas_time || 0));
         }
 
-        // Atualizar interface
-        const totalJogadoresEl = document.getElementById('total-jogadores');
-        const jogoAtualEl = document.getElementById('jogo-atual');
-        
+        // Atualizar interface apenas se os elementos existirem
         if (totalJogadoresEl) {
             totalJogadoresEl.textContent = jogadoresNaFila;
         }
@@ -69,6 +79,10 @@ async function carregarStatusPelada() {
         if (jogoAtualEl) {
             jogoAtualEl.textContent = jogoAtivo ? 
                 `${jogoAtivo.placar_a} x ${jogoAtivo.placar_b}` : 'Nenhum';
+        }
+        
+        if (vitoriasConsecutivasEl) {
+            vitoriasConsecutivasEl.textContent = vitoriasConsecutivas;
         }
 
         // Habilitar/desabilitar botão de iniciar jogo (se existir)
@@ -97,8 +111,16 @@ async function carregarStatusPelada() {
 // Carregar últimos jogos
 async function carregarUltimosJogos() {
     try {
-        const { data: jogos } = await Database.buscarJogosRecentes(5);
+        // Verificar se o elemento existe antes de tentar atualizá-lo
         const listaJogos = document.getElementById('lista-jogos');
+        
+        // Se o elemento não existe, sair silenciosamente
+        if (!listaJogos) {
+            return;
+        }
+        
+        const resultadoJogos = await Database.buscarJogosRecentes(5);
+        const jogos = resultadoJogos?.data || resultadoJogos;
         
         if (!jogos || jogos.length === 0) {
             listaJogos.innerHTML = `

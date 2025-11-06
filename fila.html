@@ -13,7 +13,7 @@
             <section class="header-card">
                 <h2>📋 Organização da Fila 📋</h2>
                 <div class="status-info">
-                    <span id="data-atual"></span> • <span id="total-jogadores">0 jogadores na fila</span>
+                    <span id="data-atual"></span> • <span id="total-jogadores">0 jogadores</span>
                 </div>
             </section>
 
@@ -22,18 +22,10 @@
                 <!-- Time 1 -->
                 <div class="team-card">
                     <div class="team-header time1">
-                        <h3>⚽ TIME 1 ⚽</h3>
+                        <h3>TIME 1</h3>
                     </div>
                     <div class="team-table-container">
                         <table class="team-table">
-                            <thead>
-                                <tr>
-                                    <th class="player-name-header">JOGADOR</th>
-                                    <th class="stat-header">J</th>
-                                    <th class="stat-header">V</th>
-                                    <th class="stat-header">G</th>
-                                </tr>
-                            </thead>
                             <tbody id="team1-body">
                                 <!-- Time 1 será inserido aqui via JavaScript -->
                             </tbody>
@@ -44,18 +36,10 @@
                 <!-- Time 2 -->
                 <div class="team-card">
                     <div class="team-header time2">
-                        <h3>⚽ TIME 2 ⚽</h3>
+                        <h3>TIME 2</h3>
                     </div>
                     <div class="team-table-container">
                         <table class="team-table">
-                            <thead>
-                                <tr>
-                                    <th class="player-name-header">JOGADOR</th>
-                                    <th class="stat-header">J</th>
-                                    <th class="stat-header">V</th>
-                                    <th class="stat-header">G</th>
-                                </tr>
-                            </thead>
                             <tbody id="team2-body">
                                 <!-- Time 2 será inserido aqui via JavaScript -->
                             </tbody>
@@ -77,20 +61,8 @@
                     <h3>📋 Fila de Espera</h3>
                     <span id="queue-count">0 aguardando</span>
                 </div>
-                <div class="queue-table-container">
-                    <table class="queue-table">
-                        <thead>
-                            <tr>
-                                <th class="player-name-header">JOGADOR</th>
-                                <th class="stat-header">J</th>
-                                <th class="stat-header">V</th>
-                                <th class="stat-header">G</th>
-                            </tr>
-                        </thead>
-                        <tbody id="queue-body">
-                            <!-- Fila será inserida aqui via JavaScript -->
-                        </tbody>
-                    </table>
+                <div id="queue-blocks-container" class="queue-blocks-container">
+                    <!-- Blocos da fila serão inseridos aqui via JavaScript -->
                 </div>
             </section>
 
@@ -147,6 +119,14 @@
                             <small>Trocar posições</small>
                         </div>
                     </button>
+                    
+                    <button class="management-option" onclick="mostrarEditarOrdem()">
+                        <span class="emoji">📝</span>
+                        <div class="option-info">
+                            <strong>Editar Ordem</strong>
+                            <small>Reorganizar fila</small>
+                        </div>
+                    </button>
                 </div>
                 </div>
             </section>
@@ -167,7 +147,7 @@
     <!-- Footer Mobile -->
     <footer class="footer-mobile">
         <nav class="nav-mobile">
-            <a href="#" class="nav-item" onclick="mostrarGerenciamento(); return false;">
+            <a href="#" class="nav-item guest-hidden" onclick="mostrarGerenciamento(); return false;">
                 <span class="emoji">🔄</span>
             </a>
             <a href="fila.html" class="nav-item active">
@@ -179,7 +159,7 @@
             <a href="resultados.html" class="nav-item">
                 <span class="emoji">🏆</span>
             </a>
-            <a href="#" class="nav-item" onclick="encerrarPelada(); return false;">
+            <a href="#" class="nav-item guest-hidden" onclick="encerrarPelada(); return false;">
                 <span class="emoji">🏁</span>
             </a>
         </nav>
@@ -265,6 +245,26 @@
         </div>
     </div>
 
+    <!-- Modal Editar Ordem -->
+    <div id="modal-editar-ordem" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>📝 Editar Ordem da Fila</h3>
+                <button class="btn-close" onclick="fecharModal('modal-editar-ordem')">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">Arraste os jogadores para reorganizar a ordem da fila:</p>
+                <div id="lista-editar-ordem" class="sortable-list">
+                    <!-- Lista ordenável será inserida aqui -->
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn-secondary" onclick="fecharModal('modal-editar-ordem')">Cancelar</button>
+                    <button id="btn-salvar-ordem" class="btn-primary">Salvar Nova Ordem</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tela Sem Sessão Ativa -->
     <div id="no-session-screen" class="no-session-screen" style="display: none;">
         <div class="no-session-content">
@@ -300,9 +300,31 @@
         </div>
     </div>
 
+    <!-- Modal Iniciar Partida -->
+    <div id="modal-iniciar-partida" class="modal-iniciar-partida" style="display: none;">
+        <div class="modal-overlay-iniciar"></div>
+        <div class="modal-content-iniciar">
+            <div class="modal-header-iniciar">
+                <h3>⚽ Iniciar Partida?</h3>
+            </div>
+            <div class="modal-body-iniciar">
+                <p>Ao confirmar, irá iniciar automaticamente o cronômetro.</p>
+            </div>
+            <div class="modal-buttons-iniciar">
+                <button id="btn-confirmar-iniciar" class="btn-sim-iniciar">
+                    ✅ Sim
+                </button>
+                <button id="btn-cancelar-iniciar" class="btn-nao-iniciar">
+                    ❌ Não
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="database.js"></script>
+    <script src="auth-protection.js"></script>
     <script src="fila.js"></script>
 </body>
 </html>

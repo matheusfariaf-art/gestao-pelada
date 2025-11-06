@@ -70,6 +70,23 @@ let estadoPartida = {
     }
 };
 
+// Função para obter nome da cor do colete
+function obterNomeCor(corCodigo) {
+    const coresNomes = {
+        'black': 'PRETO',
+        'red': 'VERMELHO',
+        'blue': 'AZUL',
+        'green': 'VERDE',
+        'yellow': 'AMARELO',
+        'orange': 'LARANJA',
+        'purple': 'ROXO',
+        'white': 'BRANCO',
+        'gray': 'CINZA',
+        'navy': 'MARINHO'
+    };
+    return coresNomes[corCodigo] || corCodigo.toUpperCase();
+}
+
 // Inicialização da página
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -304,6 +321,9 @@ async function renderizarPartida() {
         golsPartida: estadoPartida.golsPartida
     });
     
+    // Atualizar títulos dos times com as cores
+    atualizarTitulosTimes();
+    
     // Atualizar cronômetro
     atualizarDisplayCronometro();
     
@@ -388,6 +408,30 @@ async function renderizarTime(time, jogadores, containerId) {
         
         container.appendChild(playerDiv);
     }
+    
+    // Adicionar opção "Gol Contra" quando estiver no modo de seleção de gol
+    if (modoSelecaoGol.ativo && modoSelecaoGol.time === time) {
+        console.log(`🔄 Adicionando opção "Gol Contra" para time ${time}`);
+        
+        const golContraDiv = document.createElement('div');
+        golContraDiv.className = 'player-item gol-contra-option';
+        golContraDiv.innerHTML = `
+            <div class="player-name gol-contra-name" data-gol-contra="true" data-time="${time}">🔄 Gol Contra</div>
+        `;
+        
+        // Event listener para gol contra
+        const golContraElement = golContraDiv.querySelector('.player-name');
+        golContraElement.addEventListener('click', (e) => {
+            console.log('🔄 Clique em Gol Contra detectado');
+            if (modoSelecaoGol.ativo && modoSelecaoGol.time === time) {
+                marcarGolContra(time); // Passa o time que vai ser beneficiado
+                desativarModoSelecaoGol();
+            }
+        });
+        
+        container.appendChild(golContraDiv);
+        console.log(`✅ Opção "Gol Contra" adicionada ao time ${time}`);
+    }
 }
 
 // Configurar event listeners
@@ -462,6 +506,76 @@ function configurarEventListeners() {
         if (e.target.id === 'modal-confirmacao') {
             fecharModal();
         }
+    });
+    
+    // Botões do modal fim de tempo
+    document.getElementById('btn-finalizar-partida').addEventListener('click', () => {
+        // Verificar se há empate e se um time foi selecionado
+        if (estadoPartida.placarA === estadoPartida.placarB) {
+            const timesSelecionados = document.querySelectorAll('.btn-time.selected');
+            if (timesSelecionados.length === 0) {
+                alert('⚠️ Selecione qual time terá prioridade na fila!');
+                return;
+            }
+        }
+        
+        if (confirm('🏁 Confirma a finalização da partida?')) {
+            fecharModalFimTempo();
+            finalizarPartida();
+        }
+    });
+    
+    document.getElementById('btn-realizar-ajuste').addEventListener('click', () => {
+        fecharModalFimTempo();
+        // Cronômetro já está parado, usuário pode fazer ajustes
+        alert('⚽ Cronômetro finalizado. Você pode marcar gols de último segundo se necessário.');
+    });
+    
+    // Botões de seleção de prioridade
+    document.getElementById('btn-prioridade-preto').addEventListener('click', function() {
+        selecionarTimePrioridade('preto');
+    });
+    
+    document.getElementById('btn-prioridade-vermelho').addEventListener('click', function() {
+        selecionarTimePrioridade('vermelho');
+    });
+    
+    // Event listeners para modal de empate
+    document.getElementById('btn-empate-preto').addEventListener('click', function() {
+        selecionarTimePrioridade('preto');
+    });
+    
+    document.getElementById('btn-empate-vermelho').addEventListener('click', function() {
+        selecionarTimePrioridade('vermelho');
+    });
+    
+    document.getElementById('btn-confirmar-empate-final').addEventListener('click', function() {
+        const timesSelecionados = document.querySelectorAll('#modal-confirmar-empate .btn-time.selected');
+        if (timesSelecionados.length === 0) {
+            alert('⚠️ Selecione qual time terá prioridade na fila!');
+            return;
+        }
+        
+        if (confirm('🏁 Confirma a finalização da partida em empate?')) {
+            fecharModaisConfirmacao();
+            processarFinalizacao();
+        }
+    });
+    
+    document.getElementById('btn-cancelar-empate').addEventListener('click', function() {
+        fecharModaisConfirmacao();
+    });
+    
+    // Event listeners para modal de vitória
+    document.getElementById('btn-confirmar-vitoria-final').addEventListener('click', function() {
+        if (confirm('🏁 Confirma a finalização da partida?')) {
+            fecharModaisConfirmacao();
+            processarFinalizacao();
+        }
+    });
+    
+    document.getElementById('btn-cancelar-vitoria').addEventListener('click', function() {
+        fecharModaisConfirmacao();
     });
 }
 
@@ -718,8 +832,8 @@ async function atualizarDisplayCronometro() {
                 intervaloCronometro = null;
             }
             
-            alert('⏰ Tempo esgotado! A partida será finalizada automaticamente.');
-            finalizarPartida();
+            mostrarModalFimTempo();
+            // finalizarPartida() será chamado pelo botão do modal
         }
     } else if (tempoRestanteAtual <= 60) {
         // Último minuto - cor vermelha
@@ -748,21 +862,190 @@ function atualizarBotoes() {
     atualizarBotaoCancelar();
 }
 
+// Mostrar modal personalizado de fim de tempo
+function mostrarModalFimTempo() {
+    // Obter nomes das cores dos coletes
+    const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
+    const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
+    
+    // Atualizar elementos do modal
+    document.getElementById('cor-time-a').textContent = nomeCorTimeA;
+    document.getElementById('cor-time-b').textContent = nomeCorTimeB;
+    document.getElementById('placar-final-a').textContent = estadoPartida.placarA;
+    document.getElementById('placar-final-b').textContent = estadoPartida.placarB;
+    
+    // Atualizar botões de prioridade com cores corretas
+    document.getElementById('nome-time-preto').textContent = estadoPartida.coresColetes.timeA === 'preto' ? nomeCorTimeA : nomeCorTimeB;
+    document.getElementById('nome-time-vermelho').textContent = estadoPartida.coresColetes.timeA === 'vermelho' ? nomeCorTimeA : nomeCorTimeB;
+    
+    // Determinar resultado da partida
+    let resultadoTexto = '';
+    const selecaoPrioridade = document.getElementById('selecao-prioridade');
+    
+    if (estadoPartida.placarA > estadoPartida.placarB) {
+        resultadoTexto = `🎉 ${nomeCorTimeA} VENCEU!`;
+        selecaoPrioridade.style.display = 'none';
+    } else if (estadoPartida.placarB > estadoPartida.placarA) {
+        resultadoTexto = `🎉 ${nomeCorTimeB} VENCEU!`;
+        selecaoPrioridade.style.display = 'none';
+    } else {
+        resultadoTexto = `🤝 EMPATE!<br>Par ou Ímpar, decide a prioridade de retorno`;
+        selecaoPrioridade.style.display = 'block';
+    }
+    document.getElementById('resultado-texto').innerHTML = resultadoTexto;
+    
+    // Mostrar modal
+    const modal = document.getElementById('modal-fim-tempo');
+    modal.style.display = 'flex';
+    
+    // Prevenir scroll do body
+    document.body.style.overflow = 'hidden';
+}
+
+// Fechar modal de fim de tempo
+function fecharModalFimTempo() {
+    const modal = document.getElementById('modal-fim-tempo');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    
+    // Limpar seleções
+    document.querySelectorAll('.btn-time').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+}
+
+// Função para selecionar time com prioridade no empate
+function selecionarTimePrioridade(corSelecionada) {
+    // Remover seleção anterior de ambos os modais
+    document.querySelectorAll('.btn-time').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    // Adicionar seleção aos botões corretos em ambos os modais
+    if (corSelecionada === 'preto') {
+        const btnFimTempo = document.getElementById('btn-prioridade-preto');
+        const btnEmpate = document.getElementById('btn-empate-preto');
+        if (btnFimTempo) btnFimTempo.classList.add('selected');
+        if (btnEmpate) btnEmpate.classList.add('selected');
+    } else {
+        const btnFimTempo = document.getElementById('btn-prioridade-vermelho');
+        const btnEmpate = document.getElementById('btn-empate-vermelho');
+        if (btnFimTempo) btnFimTempo.classList.add('selected');
+        if (btnEmpate) btnEmpate.classList.add('selected');
+    }
+    
+    // Converter cor para time A ou B baseado nas cores dos coletes
+    let timePrioridade;
+    if (corSelecionada === 'preto') {
+        timePrioridade = estadoPartida.coresColetes.timeA === 'preto' ? 'A' : 'B';
+    } else {
+        timePrioridade = estadoPartida.coresColetes.timeA === 'vermelho' ? 'A' : 'B';
+    }
+    
+    // Salvar a escolha para usar na finalização (usar a variável que o sistema espera)
+    estadoPartida.timePrioridadeEmpate = timePrioridade;
+    console.log(`🎯 Selecionado time ${timePrioridade} para prioridade (cor: ${corSelecionada})`);
+}
+
+// Modal para confirmar empate manual
+function mostrarModalConfirmarEmpate() {
+    const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
+    const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
+    
+    // Atualizar elementos do modal
+    document.getElementById('cor-time-empate-a').textContent = nomeCorTimeA;
+    document.getElementById('cor-time-empate-b').textContent = nomeCorTimeB;
+    document.getElementById('placar-empate-a').textContent = estadoPartida.placarA;
+    document.getElementById('placar-empate-b').textContent = estadoPartida.placarB;
+    
+    // Atualizar botões com cores corretas
+    document.getElementById('nome-empate-preto').textContent = estadoPartida.coresColetes.timeA === 'preto' ? nomeCorTimeA : nomeCorTimeB;
+    document.getElementById('nome-empate-vermelho').textContent = estadoPartida.coresColetes.timeA === 'vermelho' ? nomeCorTimeA : nomeCorTimeB;
+    
+    // Limpar seleções anteriores
+    document.querySelectorAll('#modal-confirmar-empate .btn-time').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    // Mostrar modal
+    document.getElementById('modal-confirmar-empate').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Modal para confirmar vitória
+async function mostrarModalConfirmarVitoria(timeVencedor, nomeTimeVencedor) {
+    const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
+    const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
+    
+    // Atualizar elementos do modal
+    document.getElementById('cor-time-vitoria-a').textContent = nomeCorTimeA;
+    document.getElementById('cor-time-vitoria-b').textContent = nomeCorTimeB;
+    document.getElementById('placar-vitoria-a').textContent = estadoPartida.placarA;
+    document.getElementById('placar-vitoria-b').textContent = estadoPartida.placarB;
+    
+    // Buscar vitórias consecutivas reais do banco de dados
+    let vitoriasAtuais = 0;
+    try {
+        vitoriasAtuais = await obterVitoriasConsecutivasTimeA();
+    } catch (error) {
+        console.warn('Erro ao buscar vitórias consecutivas:', error);
+        vitoriasAtuais = estadoPartida.vitoriasConsecutivas || 0;
+    }
+    
+    // Calcular próxima vitória (atual + 1)
+    const proximaVitoria = vitoriasAtuais + 1;
+    
+    // Atualizar texto da vitória com informação correta
+    document.getElementById('texto-resultado-vitoria').innerHTML = `🎉 ${nomeTimeVencedor} VENCEU!<br>⚡ ${proximaVitoria}ª vitória consecutiva`;
+    
+    // Verificar se é terceira vitória consecutiva
+    const avisoTerceiraVitoria = document.getElementById('aviso-terceira-vitoria');
+    
+    if (vitoriasAtuais >= 2) { // Será a terceira vitória
+        avisoTerceiraVitoria.style.display = 'block';
+        document.getElementById('time-terceira-vitoria').textContent = nomeTimeVencedor;
+        document.getElementById('titulo-vitoria').textContent = 'Terceira Vitória!';
+    } else {
+        avisoTerceiraVitoria.style.display = 'none';
+        document.getElementById('titulo-vitoria').textContent = 'Vitória!';
+    }
+    
+    // Salvar informação do time vencedor
+    estadoPartida.timeVencedorModal = timeVencedor;
+    
+    // Mostrar modal
+    document.getElementById('modal-confirmar-vitoria').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+// Fechar modais de confirmação
+function fecharModaisConfirmacao() {
+    document.getElementById('modal-confirmar-empate').style.display = 'none';
+    document.getElementById('modal-confirmar-vitoria').style.display = 'none';
+    document.body.style.overflow = '';
+    
+    // Limpar seleções
+    document.querySelectorAll('.btn-time').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+}
+
+// Atualizar títulos dos times com base nas cores dos coletes
+function atualizarTitulosTimes() {
+    const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
+    const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
+    
+    document.getElementById('titulo-time-a').textContent = nomeCorTimeA;
+    document.getElementById('titulo-time-b').textContent = nomeCorTimeB;
+}
+
 // Atualizar visibilidade do botão cancelar
 function atualizarBotaoCancelar() {
     const cancelFooterBtn = document.getElementById('cancel-footer-btn');
     if (!cancelFooterBtn) return;
     
-    // Mostrar botão cancelar apenas se:
-    // 1. Não há gols marcados (placar 0x0)
-    // 2. Partida não foi finalizada
-    const podeSerCancelada = (estadoPartida.placarA === 0 && estadoPartida.placarB === 0);
-    
-    if (podeSerCancelada) {
-        cancelFooterBtn.style.display = 'flex';
-    } else {
-        cancelFooterBtn.style.display = 'none';
-    }
+    // Mostrar botão cancelar sempre que há uma partida ativa
+    cancelFooterBtn.style.display = 'flex';
 }
 
 // Atualizar botão do cronômetro
@@ -832,11 +1115,11 @@ function aplicarCoresVisuais() {
     const titleA = teamSectionA.querySelector('h3');
     const titleB = teamSectionB.querySelector('h3');
     
-    const nomeCorA = estadoPartida.coresColetes.timeA === 'black' ? 'Preto' : 'Vermelho';
-    const nomeCorB = estadoPartida.coresColetes.timeB === 'black' ? 'Preto' : 'Vermelho';
+    const nomeCorA = estadoPartida.coresColetes.timeA === 'black' ? 'PRETO' : 'VERMELHO';
+    const nomeCorB = estadoPartida.coresColetes.timeB === 'black' ? 'PRETO' : 'VERMELHO';
     
-    titleA.textContent = `Colete ${nomeCorA}`;
-    titleB.textContent = `Colete ${nomeCorB}`;
+    titleA.textContent = nomeCorA;
+    titleB.textContent = nomeCorB;
     
     // Aplicar cores aos botões de gol
     const goalBtnA = document.getElementById('goal-team-a');
@@ -878,6 +1161,10 @@ function ativarModoSelecaoGol(time) {
     modoSelecaoGol.ativo = true;
     modoSelecaoGol.time = time;
     
+    // Re-renderizar times para mostrar opção de gol contra
+    renderizarTime('A', estadoPartida.timeA, 'team-a-players');
+    renderizarTime('B', estadoPartida.timeB, 'team-b-players');
+    
     // Adicionar classe visual aos jogadores
     aplicarEfeitoSelecaoGol(time);
     
@@ -894,6 +1181,10 @@ function ativarModoSelecaoGol(time) {
 function desativarModoSelecaoGol() {
     modoSelecaoGol.ativo = false;
     modoSelecaoGol.time = null;
+    
+    // Re-renderizar times para remover opção de gol contra
+    renderizarTime('A', estadoPartida.timeA, 'team-a-players');
+    renderizarTime('B', estadoPartida.timeB, 'team-b-players');
     
     // Remover efeitos visuais
     removerEfeitoSelecaoGol();
@@ -1070,6 +1361,72 @@ async function marcarGol(jogadorId, time, nomeJogador) {
     }
 }
 
+// Marcar gol contra (sem contabilizar estatística para jogador)
+async function marcarGolContra(timeBeneficiado) {
+    try {
+        if (!estadoPartida.iniciado) {
+            alert('⚠️ Inicie o cronômetro antes de marcar gols.');
+            return;
+        }
+        
+        // Definir qual time fez o gol contra
+        const timeQueFezGolContra = timeBeneficiado === 'A' ? 'B' : 'A';
+        const nomeTimeBeneficiado = timeBeneficiado === 'A' ? 'Time A' : 'Time B';
+        const nomeTimeQueFez = timeQueFezGolContra === 'A' ? 'Time A' : 'Time B';
+        
+        if (!confirm(`🔄 Confirmar gol contra?\n\n${nomeTimeQueFez} fez gol contra a favor do ${nomeTimeBeneficiado}.`)) {
+            return;
+        }
+        
+        // CORRIGIDO: Atualizar placar do time que recebe o benefício
+        if (timeBeneficiado === 'A') {
+            estadoPartida.placarA++; // Gol contra a favor do Time A
+        } else {
+            estadoPartida.placarB++; // Gol contra a favor do Time B
+        }
+        
+        // Salvar no banco
+        console.log('💾 Salvando gol contra no banco:', {
+            placar_a: estadoPartida.placarA,
+            placar_b: estadoPartida.placarB,
+            gol_contra: true,
+            time_beneficiado: timeBeneficiado,
+            time_que_fez_gol_contra: timeQueFezGolContra
+        });
+        
+        // Salvar placar atualizado na tabela jogos
+        const resultadoPlacar = await atualizarJogoNoBanco(estadoPartida.jogoId, {
+            placar_a: estadoPartida.placarA,
+            placar_b: estadoPartida.placarB
+        });
+        
+        // Registrar gol contra na tabela gols (sem jogador específico)
+        const resultadoGol = await Database.registrarGolContra({
+            jogo_id: estadoPartida.jogoId,
+            time_gol_contra: timeQueFezGolContra,
+            time_beneficiado: timeBeneficiado
+        });
+        
+        if (!resultadoPlacar?.success) {
+            console.error('❌ Falha ao salvar gol contra:', resultadoPlacar?.error);
+            alert('❌ Erro ao salvar gol contra no banco de dados!');
+        } else {
+            console.log('✅ Gol contra salvo com sucesso!');
+            alert(`✅ Gol contra marcado!\n${nomeTimeQueFez} fez gol contra a favor do ${nomeTimeBeneficiado}!`);
+        }
+        
+        // Atualizar interface
+        await renderizarPartida();
+        
+        // Verificar fim de jogo
+        await verificarFimDeJogo();
+        
+    } catch (error) {
+        console.error('Erro ao marcar gol contra:', error);
+        alert('❌ Erro ao marcar gol contra.');
+    }
+}
+
 // Mostrar opções do VAR
 async function mostrarVAR() {
     // Buscar último gol da partida
@@ -1082,9 +1439,22 @@ async function mostrarVAR() {
     
     const ultimoGol = resultadoGols.data[resultadoGols.data.length - 1];
     
+    // Verificar se é gol contra ou gol normal
+    let mensagem;
+    if (ultimoGol.gol_contra) {
+        // É um gol contra
+        const timeBeneficiado = ultimoGol.time === 'A' ? 'Time A' : 'Time B';
+        const timeQueFez = ultimoGol.time_gol_contra === 'A' ? 'Time A' : 'Time B';
+        mensagem = `Desfazer último gol contra?\n\n${timeQueFez} fez gol contra a favor do ${timeBeneficiado}.`;
+    } else {
+        // É um gol normal
+        const nomeJogador = ultimoGol.jogadores ? ultimoGol.jogadores.nome : 'Jogador';
+        mensagem = `Desfazer último gol de ${nomeJogador}?`;
+    }
+    
     mostrarModal(
         '📺 VAR',
-        `Desfazer último gol de ${ultimoGol.jogadores.nome}?`,
+        mensagem,
         () => desfazerUltimoGol(ultimoGol)
     );
 }
@@ -1100,16 +1470,28 @@ async function desfazerUltimoGol(gol) {
             throw new Error('Falha ao remover gol do banco');
         }
         
-        // Atualizar placar
-        if (gol.time === 'A') {
-            estadoPartida.placarA--;
+        // Atualizar placar baseado no tipo de gol
+        if (gol.gol_contra) {
+            // É gol contra - diminuir do time que recebeu o benefício
+            if (gol.time === 'A') {
+                estadoPartida.placarA--;
+            } else {
+                estadoPartida.placarB--;
+            }
+            console.log('📺 VAR: Gol contra desfeito');
         } else {
-            estadoPartida.placarB--;
-        }
-        
-        // Atualizar gols do jogador
-        if (estadoPartida.golsPartida[gol.jogador_id] > 0) {
-            estadoPartida.golsPartida[gol.jogador_id]--;
+            // É gol normal - diminuir do time que marcou
+            if (gol.time === 'A') {
+                estadoPartida.placarA--;
+            } else {
+                estadoPartida.placarB--;
+            }
+            
+            // Atualizar gols do jogador (só para gols normais)
+            if (gol.jogador_id && estadoPartida.golsPartida[gol.jogador_id] > 0) {
+                estadoPartida.golsPartida[gol.jogador_id]--;
+            }
+            console.log('📺 VAR: Gol normal desfeito');
         }
         
         // Salvar placar atualizado
@@ -1124,6 +1506,10 @@ async function desfazerUltimoGol(gol) {
         
         // Atualizar interface
         await renderizarPartida();
+        
+        // Mostrar confirmação
+        const tipoGol = gol.gol_contra ? 'gol contra' : 'gol';
+        alert(`✅ ${tipoGol.charAt(0).toUpperCase() + tipoGol.slice(1)} desfeito com sucesso!`);
         
         fecharModal();
         
@@ -1192,33 +1578,43 @@ async function cancelarPartida() {
     }
 }
 
-function finalizarPartida() {
-    let mensagem = '';
+async function finalizarPartida() {
+    const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
+    const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
     
     if (estadoPartida.placarA > estadoPartida.placarB) {
-        mensagem = `🏆 Confirmar vitória do TIME A por ${estadoPartida.placarA}x${estadoPartida.placarB}?`;
-        mostrarModal('🏁 Finalizar Partida', mensagem, () => processarFinalizacao());
+        // Vitória do Time A
+        await mostrarModalConfirmarVitoria('A', nomeCorTimeA);
     } else if (estadoPartida.placarB > estadoPartida.placarA) {
-        mensagem = `🏆 Confirmar vitória do TIME B por ${estadoPartida.placarB}x${estadoPartida.placarA}?`;
-        mostrarModal('🏁 Finalizar Partida', mensagem, () => processarFinalizacao());
+        // Vitória do Time B
+        await mostrarModalConfirmarVitoria('B', nomeCorTimeB);
     } else {
-        // Empate - mostrar modal de desempate
-        mostrarModalDesempate();
+        // Empate - mostrar modal de confirmação com seleção
+        mostrarModalConfirmarEmpate();
     }
 }
 
+// FUNÇÃO DESATIVADA - Modal de desempate movido para o modal de fim de tempo
 // Mostrar modal de desempate
+/*
 function mostrarModalDesempate() {
+    const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
+    const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
+    
+    // Obter emojis das cores
+    const emojiTimeA = estadoPartida.coresColetes.timeA === 'preto' ? '⚫' : '🔴';
+    const emojiTimeB = estadoPartida.coresColetes.timeB === 'preto' ? '⚫' : '🔴';
+    
     const modalContent = `
         <div style="text-align: center;">
             <h3>🤝 Empate ${estadoPartida.placarA}x${estadoPartida.placarB}</h3>
             <p>Escolha qual time terá <strong>prioridade na fila</strong>:</p>
             <div style="margin: 20px 0; display: flex; gap: 15px; justify-content: center;">
-                <button onclick="finalizarComPrioridade('A')" style="background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
-                    🔵 TIME A
+                <button onclick="finalizarComPrioridade('A')" style="background: #333; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                    ${emojiTimeA} ${nomeCorTimeA}
                 </button>
                 <button onclick="finalizarComPrioridade('B')" style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
-                    🔴 TIME B
+                    ${emojiTimeB} ${nomeCorTimeB}
                 </button>
             </div>
             <p style="font-size: 12px; color: #666;">Time com prioridade ficará em posição melhor na fila</p>
@@ -1234,7 +1630,7 @@ function mostrarModalDesempate() {
     document.querySelector('.modal-buttons').style.display = 'none';
 }
 
-// Finalizar com prioridade específica no empate
+// FUNÇÃO DESATIVADA - Finalizar com prioridade específica no empate
 window.finalizarComPrioridade = function(timePrioridade) {
     estadoPartida.timePrioridadeEmpate = timePrioridade;
     console.log(`🎯 Empate com prioridade para TIME ${timePrioridade}`);
@@ -1245,6 +1641,7 @@ window.finalizarComPrioridade = function(timePrioridade) {
     fecharModal();
     processarFinalizacao();
 }
+*/
 
 // Processar finalização da partida
 async function processarFinalizacao() {

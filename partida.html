@@ -27,7 +27,6 @@
                         <span class="emoji">🔄</span>
                     </button>
                 </div>
-                <div class="consecutive-wins" id="consecutive-wins">Vitórias consecutivas: 0/3</div>
             </div>
         </header>
 
@@ -57,7 +56,7 @@
             <!-- Time A -->
             <div class="team-section">
                 <div class="team-header">
-                    <h3>TIME A</h3>
+                    <h3 id="titulo-time-a">PRETO</h3>
                 </div>
                 <div class="players-list" id="team-a-players">
                     <!-- Jogadores do time A serão inseridos aqui -->
@@ -67,7 +66,7 @@
             <!-- Time B -->
             <div class="team-section">
                 <div class="team-header">
-                    <h3>TIME B</h3>
+                    <h3 id="titulo-time-b">VERMELHO</h3>
                 </div>
                 <div class="players-list" id="team-b-players">
                     <!-- Jogadores do time B serão inseridos aqui -->
@@ -88,6 +87,8 @@
             <button id="goal-team-b" class="goal-btn team-b-goal">
                 <span class="text">Gol ⚽</span>
             </button>
+            
+            <div class="consecutive-wins" id="consecutive-wins">Vitórias consecutivas: 0/3</div>
         </section>
         
         <!-- Finalizar Partida -->
@@ -104,7 +105,147 @@
         </div>
     </div>
 
+    <!-- Modal Fim de Tempo -->
+    <div id="modal-fim-tempo" class="modal-fim-tempo" style="display: none;">
+        <div class="modal-fim-tempo-content">
+            <div class="modal-header-tempo">
+                <div class="despertador-animado">⏰</div>
+                <h2>Fim de Papo!</h2>
+            </div>
+            
+            <div class="resultado-partida">
+                <div class="placar-final">
+                    <div class="nomes-times">
+                        <span class="cor-time" id="cor-time-a">Preto</span>
+                        <span class="cor-time" id="cor-time-b">Vermelho</span>
+                    </div>
+                    <div class="placar-numeros">
+                        <span class="placar-time" id="placar-final-a">0</span>
+                        <span class="vs-final">x</span>
+                        <span class="placar-time" id="placar-final-b">0</span>
+                    </div>
+                </div>
+                
+                <div class="resultado-texto" id="resultado-texto">
+                    <!-- Resultado será inserido aqui -->
+                </div>
+                
+                <div class="selecao-prioridade" id="selecao-prioridade" style="display: none;">
+                    <h4>Quem fica na fila?</h4>
+                    <div class="botoes-times">
+                        <button class="btn-time preto" id="btn-prioridade-preto" data-time="preto">
+                            ⚫ <span id="nome-time-preto">PRETO</span>
+                        </button>
+                        <button class="btn-time vermelho" id="btn-prioridade-vermelho" data-time="vermelho">
+                            🔴 <span id="nome-time-vermelho">VERMELHO</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons-tempo">
+                <button id="btn-finalizar-partida" class="btn-finalizar">
+                    🏁 Finalizar Partida
+                </button>
+                <button id="btn-realizar-ajuste" class="btn-ajuste">
+                    ⚽ Realizar Ajuste
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <!-- Modal Confirmação Empate -->
+    <div id="modal-confirmar-empate" class="modal-fim-tempo" style="display: none;">
+        <div class="modal-fim-tempo-content">
+            <div class="modal-header-tempo">
+                <div class="despertador-animado">🤝</div>
+                <h2>Empate!</h2>
+            </div>
+            
+            <div class="resultado-partida">
+                <div class="placar-final">
+                    <div class="nomes-times">
+                        <span class="cor-time" id="cor-time-empate-a">Preto</span>
+                        <span class="cor-time" id="cor-time-empate-b">Vermelho</span>
+                    </div>
+                    <div class="placar-numeros">
+                        <span class="placar-time" id="placar-empate-a">0</span>
+                        <span class="vs-final">x</span>
+                        <span class="placar-time" id="placar-empate-b">0</span>
+                    </div>
+                </div>
+                
+                <div class="resultado-texto">
+                    🤝 EMPATE!<br>Par ou Ímpar, decide a prioridade de retorno
+                </div>
+                
+                <div class="selecao-prioridade">
+                    <h4>Quem fica na fila?</h4>
+                    <div class="botoes-times">
+                        <button class="btn-time preto" id="btn-empate-preto" data-time="preto">
+                            ⚫ <span id="nome-empate-preto">PRETO</span>
+                        </button>
+                        <button class="btn-time vermelho" id="btn-empate-vermelho" data-time="vermelho">
+                            🔴 <span id="nome-empate-vermelho">VERMELHO</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons-tempo">
+                <button id="btn-confirmar-empate-final" class="btn-finalizar">
+                    🏁 Finalizar Partida
+                </button>
+                <button id="btn-cancelar-empate" class="btn-ajuste">
+                    ❌ Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmação Vitória -->
+    <div id="modal-confirmar-vitoria" class="modal-fim-tempo" style="display: none;">
+        <div class="modal-fim-tempo-content">
+            <div class="modal-header-tempo">
+                <div class="despertador-animado">🏆</div>
+                <h2 id="titulo-vitoria">Vitória!</h2>
+            </div>
+            
+            <div class="resultado-partida">
+                <div class="placar-final">
+                    <div class="nomes-times">
+                        <span class="cor-time" id="cor-time-vitoria-a">Preto</span>
+                        <span class="cor-time" id="cor-time-vitoria-b">Vermelho</span>
+                    </div>
+                    <div class="placar-numeros">
+                        <span class="placar-time" id="placar-vitoria-a">0</span>
+                        <span class="vs-final">x</span>
+                        <span class="placar-time" id="placar-vitoria-b">0</span>
+                    </div>
+                </div>
+                
+                <div class="resultado-texto" id="texto-resultado-vitoria">
+                    🎉 Vitória confirmada!
+                </div>
+                
+                <div class="aviso-terceira-vitoria" id="aviso-terceira-vitoria" style="display: none;">
+                    <div class="terceira-vitoria-content">
+                        🔥 <strong>TERCEIRA VITÓRIA CONSECUTIVA!</strong> 🔥<br>
+                        Ambos os times saem, prioridade de retorno à fila para o time <span class="time-vencedor-final" id="time-terceira-vitoria">TIME</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons-tempo">
+                <button id="btn-confirmar-vitoria-final" class="btn-finalizar">
+                    🏁 Finalizar Partida
+                </button>
+                <button id="btn-cancelar-vitoria" class="btn-ajuste">
+                    ❌ Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer Mobile -->
     <footer class="footer-mobile">
@@ -218,6 +359,9 @@
         <p>Carregando partida...</p>
     </div>
 
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="database.js"></script>
+    <script src="auth-protection.js"></script>
     <script src="vitoria-controle.js"></script>
     <script src="partida.js"></script>
 </body>

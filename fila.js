@@ -236,7 +236,7 @@ async function renderGameInterface() {
     await renderNextTeams();
     
     // Renderizar fila de espera (agora as stats já estão no cache)
-    await renderQueueTable();
+    await renderQueueBlocks();
     
     // Renderizar reservas
     renderReserves();
@@ -252,7 +252,7 @@ function updateHeaderInfo() {
     // Atualizar contador de jogadores
     const totalJogadores = document.getElementById('total-jogadores');
     if (totalJogadores) {
-        totalJogadores.textContent = `${queueSize}/${LIMITE_FILA} jogadores na fila`;
+        totalJogadores.textContent = `${queueSize}/${LIMITE_FILA} jogadores`;
         
         // Adicionar classe de aviso quando próximo do limite
         if (queueSize >= LIMITE_FILA * 0.9) {
@@ -387,22 +387,15 @@ async function renderTeam(teamNumber, startIndex, endIndex) {
         const player = teamPlayers[i];
         
         if (player) {
-            const stats = statsCache.get(player.jogador_id) || { jogos: 0, vitorias: 0, gols: 0 };
             html += `
                 <tr>
                     <td class="player-name-cell">${player.nome || player.jogador?.nome}</td>
-                    <td class="stat-cell">${stats.jogos}</td>
-                    <td class="stat-cell">${stats.vitorias}</td>
-                    <td class="stat-cell">${stats.gols}</td>
                 </tr>
             `;
         } else {
             html += `
                 <tr class="empty-row">
                     <td class="player-name-cell">Aguardando jogador...</td>
-                    <td class="stat-cell">-</td>
-                    <td class="stat-cell">-</td>
-                    <td class="stat-cell">-</td>
                 </tr>
             `;
         }
@@ -411,9 +404,9 @@ async function renderTeam(teamNumber, startIndex, endIndex) {
     tbody.innerHTML = html;
 }
 
-// Função para renderizar a tabela da fila de espera
-async function renderQueueTable() {
-    const tbody = document.getElementById('queue-body');
+// Função para renderizar os blocos da fila de espera
+async function renderQueueBlocks() {
+    const container = document.getElementById('queue-blocks-container');
     const queueCount = document.getElementById('queue-count');
     
     if (queueCount) {
@@ -421,40 +414,78 @@ async function renderQueueTable() {
         queueCount.textContent = `${remainingInQueue} aguardando`;
     }
     
-    if (!tbody) return;
+    if (!container) return;
     
     // Jogadores a partir da posição 13 (índice 12)
     const waitingPlayers = gameState.queue.slice(12);
     
     if (waitingPlayers.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" class="empty-state" style="text-align: center; padding: 40px;">
-                    <span class="emoji" style="font-size: 2rem; display: block; margin-bottom: 10px;">✅</span>
-                    <strong>Todos organizados!</strong><br>
-                    <small style="color: #666;">Próximos 12 jogadores já estão nos times</small>
-                </td>
-            </tr>
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px;">
+                <span class="emoji" style="font-size: 2rem; display: block; margin-bottom: 10px;">✅</span>
+                <strong>Todos organizados!</strong><br>
+                <small style="color: #666;">Próximos 12 jogadores já estão nos times</small>
+            </div>
         `;
         return;
     }
     
-    let html = '';
-    for (let i = 0; i < waitingPlayers.length; i++) {
-        const player = waitingPlayers[i];
-        const stats = statsCache.get(player.jogador_id) || { jogos: 0, vitorias: 0, gols: 0 };
-        
-        html += `
-            <tr>
-                <td class="player-name-cell">${player.nome || player.jogador?.nome}</td>
-                <td class="stat-cell">${stats.jogos}</td>
-                <td class="stat-cell">${stats.vitorias}</td>
-                <td class="stat-cell">${stats.gols}</td>
-            </tr>
-        `;
+    // Dividir jogadores em grupos de 6
+    const blocks = [];
+    for (let i = 0; i < waitingPlayers.length; i += 6) {
+        blocks.push(waitingPlayers.slice(i, i + 6));
     }
     
-    tbody.innerHTML = html;
+    let html = '';
+    blocks.forEach((block, blockIndex) => {
+        const isNextUp = blockIndex === 0; // Primeiro bloco é o próximo
+        
+        // Definir o texto do cabeçalho
+        let headerText;
+        if (isNextUp) {
+            headerText = 'Próximo time';
+        } else {
+            headerText = `${blockIndex + 1}º na fila`;
+        }
+        
+        html += `
+            <div class="queue-block ${isNextUp ? 'next-up' : ''}">
+                <div class="queue-block-header">
+                    <h4>${headerText}</h4>
+                </div>
+                <div class="queue-block-table-container">
+                    <table class="queue-block-table">
+                        <tbody>
+        `;
+        
+        // Adicionar jogadores do bloco
+        for (let i = 0; i < 6; i++) {
+            const player = block[i];
+            if (player) {
+                html += `
+                    <tr>
+                        <td class="queue-block-player-name">${player.nome || player.jogador?.nome}</td>
+                    </tr>
+                `;
+            } else {
+                // Linha vazia para completar o time de 6
+                html += `
+                    <tr class="empty-row">
+                        <td class="queue-block-player-name" style="color: #ccc; font-style: italic;">Aguardando jogador...</td>
+                    </tr>
+                `;
+            }
+        }
+        
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
 }
 
 function renderReserves() {
@@ -820,6 +851,11 @@ function mostrarOpcoesGerenciamento() {
 
 // Função para mostrar painel de gerenciamento
 function mostrarGerenciamento() {
+    // Verificar permissão
+    if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
+        return;
+    }
+    
     const painel = document.getElementById('painel-gerenciamento');
     if (painel) {
         painel.style.display = 'flex';
@@ -865,6 +901,14 @@ function fecharModal(modalId) {
 // ========== FUNCIONALIDADE ADICIONAR ==========
 
 async function mostrarAdicionar() {
+    // Verificar permissão
+    if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
+        return;
+    }
+    
+    // Salvar estado atual dos primeiros 12 jogadores
+    primeiros12Originais = gameState.queue.slice(0, 12).map(p => p.jogador_id || p.id);
+    
     managementState.operacao = 'adicionar';
     fecharGerenciamento();
     
@@ -949,6 +993,14 @@ function adicionarEventListenersJogadores() {
 // ========== FUNCIONALIDADE REMOVER ==========
 
 async function mostrarRemover() {
+    // Verificar permissão
+    if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
+        return;
+    }
+    
+    // Salvar estado atual dos primeiros 12 jogadores
+    primeiros12Originais = gameState.queue.slice(0, 12).map(p => p.jogador_id || p.id);
+    
     managementState.operacao = 'remover';
     fecharGerenciamento();
     
@@ -974,6 +1026,14 @@ async function mostrarRemover() {
 // ========== FUNCIONALIDADE SUBSTITUIR ==========
 
 async function mostrarSubstituir() {
+    // Verificar permissão
+    if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
+        return;
+    }
+    
+    // Salvar estado atual dos primeiros 12 jogadores
+    primeiros12Originais = gameState.queue.slice(0, 12).map(p => p.jogador_id || p.id);
+    
     managementState.operacao = 'substituir';
     fecharGerenciamento();
     
@@ -1123,6 +1183,46 @@ function mostrarConfirmacao(titulo, detalhes, callback) {
 
 // ========== EXECUÇÃO DAS OPERAÇÕES ==========
 
+// Função auxiliar para verificar mudanças nos primeiros 12 após operação
+async function verificarMudancaTimesPartida() {
+    try {
+        // Verificar se houve mudança nos primeiros 12 jogadores
+        const primeiros12Atuais = gameState.queue.slice(0, 12).map(p => p.jogador_id || p.id);
+        const houveMudancaNos12 = !arraysIguais(primeiros12Originais, primeiros12Atuais);
+        
+        // Se houve mudança nos primeiros 12, verificar se há partida ativa
+        if (houveMudancaNos12) {
+            const partidaAtiva = await obterJogoAtivo();
+            
+            if (partidaAtiva) {
+                const confirmacao = confirm(`
+⚠️ MUDANÇA DETECTADA NOS TIMES!
+
+🎮 Partida em andamento: Jogo #${partidaAtiva.numero_jogo || 'Atual'}
+🔄 A operação alterou os primeiros 12 jogadores da fila
+
+Deseja atualizar os times da partida?
+
+✅ SIM: Times serão atualizados na partida
+❌ NÃO: Apenas a fila será alterada
+                `);
+                
+                if (confirmacao) {
+                    await atualizarTimesPartida(partidaAtiva.id);
+                    alert('✅ Operação concluída e times da partida atualizados!');
+                    return;
+                }
+            }
+        }
+        
+        alert('✅ Operação concluída com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro ao verificar mudança nos times:', error);
+        alert('✅ Operação concluída, mas houve erro ao verificar partida ativa.');
+    }
+}
+
 async function executarAdicionar(jogadorId) {
     try {
         // Verificar limite máximo de jogadores na fila (padrão: 30)
@@ -1142,7 +1242,8 @@ async function executarAdicionar(jogadorId) {
         await loadGameState();
         await renderGameInterface();
         
-        showSuccess('Jogador adicionado à fila com sucesso!');
+        // Verificar se mudança afeta partida ativa
+        await verificarMudancaTimesPartida();
         
     } catch (error) {
         console.error('Erro ao adicionar jogador:', error);
@@ -1162,7 +1263,8 @@ async function executarRemover(jogadorId) {
         await loadGameState();
         await renderGameInterface();
         
-        showSuccess('Jogador removido da fila com sucesso!');
+        // Verificar se mudança afeta partida ativa
+        await verificarMudancaTimesPartida();
         
     } catch (error) {
         console.error('Erro ao remover jogador:', error);
@@ -1184,7 +1286,8 @@ async function executarSubstituir(jogadorSaiId, jogadorEntraId) {
         await loadGameState();
         await renderGameInterface();
         
-        showSuccess('Substituição realizada com sucesso!');
+        // Verificar se mudança afeta partida ativa
+        await verificarMudancaTimesPartida();
         
     } catch (error) {
         console.error('Erro ao substituir jogador:', error);
@@ -1321,8 +1424,9 @@ async function iniciarProximaPartida() {
             return;
         }
 
-        // Confirmação
-        if (confirm('🎯 Deseja iniciar a próxima partida com os times atuais?')) {
+        // Confirmação com modal personalizado
+        const confirmado = await mostrarModalIniciarPartida();
+        if (confirmado) {
             console.log('✅ Usuário confirmou. Criando novo jogo...');
             
             // Criar novo jogo no banco
@@ -1421,6 +1525,11 @@ function hideNoSessionScreen() {
 // Função para encerrar a pelada do dia
 async function encerrarPelada() {
     try {
+        // Verificar permissão
+        if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
+            return;
+        }
+        
         if (!gameState.sessaoAtiva) {
             showError('Não há sessão ativa para encerrar');
             return;
@@ -1726,5 +1835,405 @@ function aplicarRestricoesVisuais() {
             });
             
         }, 1000);
+    }
+}
+
+// ==================== EDITAR ORDEM DA FILA ====================
+
+// Variável para armazenar os primeiros 12 jogadores antes da edição
+let primeiros12Originais = [];
+
+function mostrarEditarOrdem() {
+    if (!hasActionPermission()) {
+        alert('❌ Você não tem permissão para editar a ordem da fila.');
+        return;
+    }
+    
+    // Salvar estado atual dos primeiros 12 jogadores
+    primeiros12Originais = gameState.queue.slice(0, 12).map(p => p.jogador_id || p.id);
+    
+    fecharGerenciamento();
+    
+    const modal = document.getElementById('modal-editar-ordem');
+    const lista = document.getElementById('lista-editar-ordem');
+    
+    // Renderizar lista ordenável
+    renderSortableList();
+    
+    modal.style.display = 'flex';
+}
+
+function renderSortableList() {
+    const lista = document.getElementById('lista-editar-ordem');
+    if (!lista) return;
+    
+    let html = '';
+    
+    gameState.queue.forEach((player, index) => {
+        html += `
+            <div class="sortable-item" draggable="true" data-index="${index}">
+                <div class="drag-handle"></div>
+                <div class="sortable-player-info">
+                    <div class="sortable-position">${index + 1}</div>
+                    <div class="sortable-name">${player.nome || player.jogador?.nome}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    lista.innerHTML = html;
+    
+    // Adicionar eventos de drag and drop
+    initSortable();
+}
+
+function initSortable() {
+    const sortableItems = document.querySelectorAll('.sortable-item');
+    
+    sortableItems.forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragend', handleDragEnd);
+        item.addEventListener('dragenter', handleDragEnter);
+        item.addEventListener('dragleave', handleDragLeave);
+    });
+}
+
+let draggedElement = null;
+let draggedIndex = null;
+
+function handleDragStart(e) {
+    draggedElement = this;
+    draggedIndex = parseInt(this.dataset.index);
+    
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.outerHTML);
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    if (this !== draggedElement) {
+        this.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    
+    if (this !== draggedElement) {
+        const dropIndex = parseInt(this.dataset.index);
+        
+        // Reordenar array
+        movePlayerInQueue(draggedIndex, dropIndex);
+        
+        // Re-renderizar lista
+        renderSortableList();
+    }
+    
+    return false;
+}
+
+function handleDragEnd(e) {
+    const items = document.querySelectorAll('.sortable-item');
+    items.forEach(item => {
+        item.classList.remove('dragging', 'drag-over');
+    });
+    
+    draggedElement = null;
+    draggedIndex = null;
+}
+
+function movePlayerInQueue(fromIndex, toIndex) {
+    // Remover jogador da posição original
+    const player = gameState.queue.splice(fromIndex, 1)[0];
+    
+    // Inserir na nova posição
+    gameState.queue.splice(toIndex, 0, player);
+}
+
+async function salvarNovaOrdem() {
+    try {
+        console.log('🔄 Iniciando salvamento da nova ordem...');
+        
+        // Verificar se há sessão ativa
+        if (!gameState.sessaoAtiva || !gameState.sessaoAtiva.id) {
+            alert('❌ Nenhuma sessão ativa encontrada');
+            return;
+        }
+        
+        console.log('📊 Estado atual:', {
+            originais: primeiros12Originais,
+            atuais: gameState.queue.slice(0, 12).map(p => p.jogador_id || p.id)
+        });
+        
+        // Verificar se houve mudança nos primeiros 12 jogadores
+        const primeiros12Atuais = gameState.queue.slice(0, 12).map(p => p.jogador_id || p.id);
+        const houveMudancaNos12 = !arraysIguais(primeiros12Originais, primeiros12Atuais);
+        
+        console.log('🔍 Houve mudança nos 12 primeiros?', houveMudancaNos12);
+        
+        // Se houve mudança nos primeiros 12, verificar se há partida ativa
+        if (houveMudancaNos12) {
+            console.log('🎮 Verificando partida ativa...');
+            const partidaAtiva = await obterJogoAtivo();
+            console.log('🎮 Partida ativa encontrada:', partidaAtiva);
+            
+            if (partidaAtiva) {
+                const confirmacao = confirm(`
+⚠️ ATENÇÃO: Mudança detectada nos primeiros 12 jogadores da fila!
+
+🎮 Há uma partida em andamento (Jogo #${partidaAtiva.numero_jogo || 'Atual'})
+
+🔄 Deseja atualizar os times da partida com os novos jogadores?
+
+✅ SIM: Os times da partida serão atualizados
+❌ NÃO: Apenas a fila será reordenada
+                `);
+                
+                if (confirmacao) {
+                    console.log('✅ Usuário confirmou atualização dos times');
+                    
+                    // Salvar ordem da fila
+                    await salvarOrdemFila();
+                    
+                    // Atualizar times da partida
+                    await atualizarTimesPartida(partidaAtiva.id);
+                    
+                    // Fechar modal
+                    fecharModal('modal-editar-ordem');
+                    
+                    // Re-renderizar interface
+                    await recarregarFila();
+                    
+                    alert('✅ Fila e times da partida atualizados com sucesso!');
+                    return;
+                } else {
+                    console.log('❌ Usuário optou por não atualizar os times');
+                }
+            }
+        }
+        
+        console.log('💾 Salvando apenas a ordem da fila...');
+        
+        // Salvamento normal (sem atualizar partida)
+        await salvarOrdemFila();
+        
+        // Fechar modal
+        fecharModal('modal-editar-ordem');
+        
+        // Re-renderizar interface
+        await recarregarFila();
+        
+        alert('✅ Ordem da fila atualizada com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro ao salvar ordem:', error);
+        alert('❌ Erro ao salvar a nova ordem da fila');
+    }
+}
+
+// Função para salvar apenas a ordem da fila
+async function salvarOrdemFila() {
+    // Inicializar client se necessário
+    if (!client) {
+        client = initializeSupabase();
+    }
+    
+    // Atualizar a posição de cada jogador na fila
+    const updatePromises = gameState.queue.map(async (player, index) => {
+        try {
+            const { error } = await client
+                .from('fila')
+                .update({ posicao_fila: index + 1 })
+                .eq('sessao_id', gameState.sessaoAtiva.id)
+                .eq('jogador_id', player.jogador_id || player.id);
+            
+            return { error, playerId: player.jogador_id || player.id };
+        } catch (error) {
+            return { error, playerId: player.jogador_id || player.id };
+        }
+    });
+    
+    // Executar todas as atualizações
+    const results = await Promise.all(updatePromises);
+    
+    // Verificar se houve algum erro
+    const hasError = results.some(result => result.error);
+    if (hasError) {
+        console.error('Erro ao atualizar posições:', results);
+        throw new Error('Erro ao salvar posições na fila');
+    }
+}
+
+// Função para atualizar os times da partida ativa
+async function atualizarTimesPartida(jogoId) {
+    try {
+        if (!client) {
+            client = initializeSupabase();
+        }
+        
+        // Pegar os novos times (primeiros 12 da fila atual)
+        const time1 = gameState.queue.slice(0, 6).map(p => ({
+            id: p.jogador_id || p.id,
+            nome: p.nome || p.jogador?.nome
+        }));
+        
+        const time2 = gameState.queue.slice(6, 12).map(p => ({
+            id: p.jogador_id || p.id,
+            nome: p.nome || p.jogador?.nome
+        }));
+        
+        console.log('Atualizando jogo:', jogoId, 'com times:', { time1, time2 });
+        
+        // Atualizar o jogo com os novos times
+        const { error } = await client
+            .from('jogos')
+            .update({
+                time_a: time1,
+                time_b: time2
+            })
+            .eq('id', jogoId);
+        
+        if (error) {
+            console.error('Erro ao atualizar times da partida:', error);
+            throw error;
+        }
+        
+        console.log('✅ Times da partida atualizados com sucesso');
+        
+        // Tentar registrar a substituição no histórico (opcional)
+        try {
+            await registrarSubstituicao(jogoId, primeiros12Originais, gameState.queue.slice(0, 12).map(p => p.jogador_id || p.id));
+        } catch (histError) {
+            console.log('Aviso: Não foi possível registrar no histórico:', histError);
+            // Não interrompe o fluxo principal
+        }
+        
+    } catch (error) {
+        console.error('Erro ao atualizar times da partida:', error);
+        throw error;
+    }
+}
+
+// Função para registrar substituições no histórico
+async function registrarSubstituicao(jogoId, timesOriginais, timesAtuais) {
+    try {
+        if (!client) {
+            client = initializeSupabase();
+        }
+        
+        const agora = new Date().toISOString();
+        
+        // Tentar criar registro de substituição (se tabela existir)
+        const { error } = await client
+            .from('substituicoes')
+            .insert({
+                jogo_id: jogoId,
+                momento_substituicao: agora,
+                motivo: 'Alteração manual da fila durante partida'
+            });
+        
+        if (error) {
+            console.log('Tabela substituicoes não existe ou erro ao inserir:', error);
+            // Salvar como comentário alternativo no console
+            console.log(`📝 SUBSTITUIÇÃO REGISTRADA:
+                Jogo: ${jogoId}
+                Momento: ${agora}
+                Times Originais: ${JSON.stringify(timesOriginais)}
+                Times Atuais: ${JSON.stringify(timesAtuais)}`);
+        } else {
+            console.log('✅ Substituição registrada no histórico');
+        }
+        
+    } catch (error) {
+        console.log('Aviso: Erro ao registrar substituição:', error);
+        // Log alternativo
+        console.log(`📝 SUBSTITUIÇÃO (LOG): Jogo ${jogoId} - ${new Date().toISOString()}`);
+    }
+}
+
+// Função auxiliar para comparar arrays
+function arraysIguais(arr1, arr2) {
+    if (arr1.length !== arr2.length) return false;
+    return arr1.every((item, index) => item === arr2[index]);
+}
+
+// Event listener para o botão salvar
+document.addEventListener('DOMContentLoaded', function() {
+    const btnSalvar = document.getElementById('btn-salvar-ordem');
+    if (btnSalvar) {
+        btnSalvar.addEventListener('click', salvarNovaOrdem);
+    }
+    
+    // Event listeners para o modal de iniciar partida
+    const btnConfirmar = document.getElementById('btn-confirmar-iniciar');
+    const btnCancelar = document.getElementById('btn-cancelar-iniciar');
+    
+    if (btnConfirmar) {
+        btnConfirmar.addEventListener('click', confirmarIniciarPartida);
+    }
+    
+    if (btnCancelar) {
+        btnCancelar.addEventListener('click', fecharModalIniciarPartida);
+    }
+});
+
+// Funções do modal de iniciar partida
+let resolveModalIniciarPartida = null;
+
+function mostrarModalIniciarPartida() {
+    return new Promise((resolve) => {
+        resolveModalIniciarPartida = resolve;
+        const modal = document.getElementById('modal-iniciar-partida');
+        const overlay = modal?.querySelector('.modal-overlay-iniciar');
+        
+        if (modal) {
+            modal.style.display = 'flex';
+            
+            // Fechar ao clicar no overlay
+            if (overlay) {
+                overlay.onclick = () => {
+                    fecharModalIniciarPartida();
+                };
+            }
+        }
+    });
+}
+
+function fecharModalIniciarPartida() {
+    const modal = document.getElementById('modal-iniciar-partida');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (resolveModalIniciarPartida) {
+        resolveModalIniciarPartida(false);
+        resolveModalIniciarPartida = null;
+    }
+}
+
+function confirmarIniciarPartida() {
+    const modal = document.getElementById('modal-iniciar-partida');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (resolveModalIniciarPartida) {
+        resolveModalIniciarPartida(true);
+        resolveModalIniciarPartida = null;
     }
 }

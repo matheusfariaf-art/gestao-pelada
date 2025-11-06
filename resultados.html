@@ -109,12 +109,63 @@
             <a href="resultados.html" class="nav-item active">
                 <span class="emoji">📊</span>
             </a>
+            <button id="btn-apagar-dia" class="nav-item admin-btn" title="Apagar dados do dia">
+                <span class="emoji">🔒</span>
+            </button>
         </nav>
     </footer>
+
+    <!-- Modal Apagar Dados do Dia -->
+    <div id="modal-apagar-dia" class="modal-senha" style="display: none;">
+        <div class="modal-senha-content">
+            <div class="modal-header">
+                <span class="modal-emoji">🔒</span>
+                <h2>Apagar Dados do Dia</h2>
+                <p>Função administrativa - Use com cuidado</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="data-seletor">
+                    <label for="data-apagar">📅 Selecione a data:</label>
+                    <select id="data-apagar" class="select-data">
+                        <option value="">Carregando datas...</option>
+                    </select>
+                </div>
+                
+                <div class="warning-box">
+                    <div class="warning-icon">⚠️</div>
+                    <div class="warning-text">
+                        <strong>Esta ação irá apagar:</strong><br>
+                        • Todas as partidas do dia<br>
+                        • Todos os gols registrados<br>
+                        • Estatísticas individuais do dia<br>
+                        • Dados de vitórias consecutivas
+                    </div>
+                </div>
+                
+                <div class="confirmacao-dupla">
+                    <h4>🔐 Para confirmar, digite: <code>APAGAR</code></h4>
+                    <input type="text" id="confirmacao-texto" placeholder="Digite APAGAR para confirmar" class="input-confirmacao">
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="cancelar-apagar" class="btn-modal-cancel">
+                    <span class="emoji">↩️</span>
+                    <span>Cancelar</span>
+                </button>
+                <button id="confirmar-apagar" class="btn-modal-danger" disabled>
+                    <span class="emoji">🗑️</span>
+                    <span>Apagar Dados</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="database.js"></script>
+    <script src="auth-protection.js"></script>
     <script src="resultados.js"></script>
 </body>
 </html>

@@ -123,7 +123,7 @@ function getRoleDisplayName(role) {
     const roles = {
         'admin': '🔧 Admin',
         'organizer': '📋 Organizador',
-        'player': '⚽ Jogador'
+        'player': '👀 Visitante' // Para casos legados ou visitantes temporários
     };
     return roles[role] || role;
 }

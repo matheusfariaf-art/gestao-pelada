@@ -42,10 +42,12 @@ function redirectToLogin() {
 // Configurar interface baseada no usuário
 function setupUserInterface(user) {
     // Aplicar restrições baseadas no role
-    applyRoleRestrictions(user.role);
+    applyRoleRestrictions(user.role, user.isGuest);
     
-    // Adicionar botão de logout
-    addLogoutButton();
+    // Adicionar indicador de visitante se necessário
+    if (user.isGuest) {
+        addGuestIndicator();
+    }
     
     // Remover qualquer informação de usuário que possa aparecer (exceto na tela de usuários)
     conditionalRemoveUserInfo();
@@ -92,18 +94,26 @@ function addUserInfoToPage(user) {
 }
 
 // Verificar se o usuário pode acessar a página atual
-function checkPageAccess(role) {
+function checkPageAccess(role, isGuest = false) {
     const currentPage = window.location.pathname.split('/').pop() || 'index.html';
     
     // Definir quais páginas cada role pode acessar
     const pageAccess = {
+        'guest': [
+            'index.html',
+            'fila.html', 
+            'estatisticas.html',
+            'resultados.html',
+            'partida.html'
+            // Visitantes: podem visualizar resultados também
+        ],
         'player': [
             'index.html',
             'fila.html',
             'estatisticas.html',
             'resultados.html',
             'partida.html'
-            // Jogadores podem VER fila, resultados, estatísticas e partidas (apenas visualização)
+            // Jogadores cadastrados: podem ver resultados também
         ],
         'organizer': [
             'index.html',
@@ -132,11 +142,18 @@ function checkPageAccess(role) {
         ]
     };
     
-    const allowedPages = pageAccess[role] || pageAccess['player'];
+    // Determinar qual conjunto de páginas usar
+    let allowedPages;
+    if (isGuest) {
+        allowedPages = pageAccess['guest'];
+    } else {
+        allowedPages = pageAccess[role] || pageAccess['player'];
+    }
     
     // Se a página atual não está na lista permitida, redirecionar
     if (!allowedPages.includes(currentPage)) {
-        alert(`❌ Você não tem permissão para acessar esta página.\nSeu nível: ${getRoleDisplayName(role)}`);
+        const userType = isGuest ? '👀 Visitante' : getRoleDisplayName(role);
+        alert(`❌ Você não tem permissão para acessar esta página.\nSeu nível: ${userType}`);
         window.location.href = 'index.html';
         return false;
     }
@@ -145,11 +162,15 @@ function checkPageAccess(role) {
 }
 
 // Aplicar restrições baseadas no role
-function applyRoleRestrictions(role) {
+function applyRoleRestrictions(role, isGuest = false) {
     // Primeiro, verificar se o usuário pode acessar esta página
-    checkPageAccess(role);
+    checkPageAccess(role, isGuest);
     
     const restrictions = {
+        'guest': {
+            hidden: ['.admin-only', '.organizer-only', '.player-only', '.guest-hidden'],
+            readonly: ['.admin-controls', '.organizer-controls', '.player-controls']
+        },
         'player': {
             hidden: ['.admin-only', '.organizer-only'],
             readonly: ['.admin-controls', '.organizer-controls']
@@ -165,7 +186,13 @@ function applyRoleRestrictions(role) {
         }
     };
     
-    const userRestrictions = restrictions[role] || restrictions['player'];
+    // Determinar qual tipo de restrição usar
+    let userRestrictions;
+    if (isGuest) {
+        userRestrictions = restrictions['guest'];
+    } else {
+        userRestrictions = restrictions[role] || restrictions['player'];
+    }
     
     // Esconder elementos
     userRestrictions.hidden.forEach(selector => {
@@ -194,7 +221,8 @@ function applyRoleRestrictions(role) {
     });
 }
 
-// Adicionar botão de logout
+// Adicionar botão de logout (DESABILITADO)
+/*
 function addLogoutButton() {
     // Verificar se já existe
     if (document.querySelector('.logout-btn')) return;
@@ -214,6 +242,7 @@ function addLogoutButton() {
         footer.appendChild(logoutItem);
     }
 }
+*/
 
 // Fazer logout
 function logout() {
@@ -249,4 +278,64 @@ function getRoleDisplayName(role) {
         'player': '⚽ Jogador'
     };
     return roleNames[role] || role;
+}
+
+// Verificar se o usuário atual é visitante
+function isGuest() {
+    const user = JSON.parse(localStorage.getItem('pelada3_user') || '{}');
+    return user.isGuest === true;
+}
+
+// Verificar se usuário tem permissão para ações
+function hasActionPermission(action = 'modify') {
+    if (isGuest()) {
+        alert('❌ Visitantes não podem realizar alterações.\nFaça login como organizador ou admin.');
+        return false;
+    }
+    return true;
+}
+
+// Adicionar indicador de visitante
+function addGuestIndicator() {
+    // Verificar se já existe
+    if (document.querySelector('.guest-indicator')) return;
+    
+    const indicator = document.createElement('div');
+    indicator.className = 'guest-indicator';
+    indicator.innerHTML = '👀 Modo Visitante';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+        animation: slideIn 0.5s ease;
+    `;
+    
+    document.body.appendChild(indicator);
+    
+    // Adicionar animação CSS
+    if (!document.querySelector('#guest-indicator-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'guest-indicator-styles';
+        styles.textContent = `
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(100%);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+        `;
+        document.head.appendChild(styles);
+    }
 }
