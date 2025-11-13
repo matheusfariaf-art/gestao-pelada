@@ -1,4 +1,142 @@
-// Estado global da fila
+// ========== LOADING STATES ==========
+// Função para mostrar skeleton loading em times
+function showTeamSkeleton(teamNumber) {
+    const tbody = document.getElementById(`team${teamNumber}-body`);
+    if (!tbody) return;
+    
+    let html = '';
+    for (let i = 0; i < 6; i++) {
+        html += `
+            <tr>
+                <td class="player-name-cell">
+                    <div class="skeleton skeleton-player"></div>
+                </td>
+            </tr>
+        `;
+    }
+    tbody.innerHTML = html;
+}
+
+// Função para mostrar skeleton loading na fila
+function showQueueSkeleton() {
+    const container = document.getElementById('queue-blocks-container');
+    if (!container) return;
+    
+    let html = '';
+    for (let block = 0; block < 3; block++) {
+        html += `
+            <div class="queue-block">
+                <div class="queue-block-header">
+                    <h4>${block === 0 ? 'Próximo time' : `${block + 1}º na fila`}</h4>
+                </div>
+                <div class="queue-block-table-container">
+                    <table class="queue-block-table">
+                        <tbody>
+        `;
+        
+        for (let i = 0; i < 6; i++) {
+            html += `
+                <tr>
+                    <td class="queue-block-player-name">
+                        <div class="skeleton skeleton-player"></div>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+// Função para adicionar overlay de loading
+function addLoadingOverlay(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    element.classList.add('loading');
+    
+    const existingOverlay = element.querySelector('.loading-overlay');
+    if (existingOverlay) return;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.innerHTML = '<div class="loading-spinner"></div>';
+    element.appendChild(overlay);
+}
+
+// Função para remover overlay de loading
+function removeLoadingOverlay(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    element.classList.remove('loading');
+    
+    const overlay = element.querySelector('.loading-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+// Função para mostrar loading durante operações assíncronas
+async function withLoading(elementId, asyncFunction) {
+    addLoadingOverlay(elementId);
+    
+    try {
+        const result = await asyncFunction();
+        return result;
+    } finally {
+        removeLoadingOverlay(elementId);
+    }
+}
+// Função de debounce para agrupar operações
+function debounce(func, wait, immediate = false) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            timeout = null;
+            if (!immediate) func.apply(this, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(this, args);
+    };
+}
+
+// Função de throttle para limitar frequência de execução
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+// Versões debounced das principais operações
+const debouncedReloadQueue = debounce(async function() {
+    console.log('🔄 Executando reload da fila (debounced)...');
+    await recarregarFila();
+}, 500);
+
+const debouncedRenderInterface = debounce(async function() {
+    console.log('🎨 Executando renderização (debounced)...');
+    await renderGameInterface();
+}, 300);
+
+// Versão throttled para scroll events (se necessário)
+const throttledScroll = throttle(function() {
+    // Lógica para eventos de scroll se necessário
+}, 100);
 let gameState = {
     currentGame: {
         time1: [],
@@ -32,10 +170,58 @@ function exibirDataAtual() {
     }
 }
 
+// Função para detectar e lidar com problemas de tracking prevention
+function checkTrackingPrevention() {
+    // Verificar se Supabase está disponível
+    if (typeof supabase === 'undefined') {
+        console.error('❌ Supabase bloqueado por tracking prevention');
+        showTrackingPreventionError();
+        return false;
+    }
+    return true;
+}
+
+// Função para mostrar erro de tracking prevention
+function showTrackingPreventionError() {
+    const container = document.querySelector('.container');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; background: #fff3cd; border: 2px solid #ffeaa7; border-radius: 15px; margin: 20px 0;">
+            <h2 style="color: #856404; margin-bottom: 20px;">🚫 Bloqueio Detectado</h2>
+            <p style="color: #664d03; margin-bottom: 15px; line-height: 1.6;">
+                O navegador está bloqueando a conexão com o banco de dados devido às configurações de privacidade.
+            </p>
+            <p style="color: #664d03; margin-bottom: 20px; font-weight: bold;">
+                Para usar a aplicação, você precisa:
+            </p>
+            <div style="text-align: left; background: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <p style="margin: 10px 0;"><strong>📱 Safari/Edge:</strong> Desabilitar "Prevenir Rastreamento"</p>
+                <p style="margin: 10px 0;"><strong>🔒 Ou:</strong> Usar modo privado/incógnito</p>
+                <p style="margin: 10px 0;"><strong>🌐 Ou:</strong> Usar Chrome/Firefox</p>
+            </div>
+            <button onclick="location.reload()" style="
+                background: #28a745; color: white; border: none; padding: 15px 30px; 
+                border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer;
+                margin-top: 20px;
+            ">
+                🔄 Tentar Novamente
+            </button>
+        </div>
+    `;
+}
+
 // Inicialização da página
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('📄 DOM carregado - iniciando aplicação...');
+    
     // Exibir data atual
     exibirDataAtual();
+    
+    // Verificar tracking prevention ANTES de tudo
+    if (!checkTrackingPrevention()) {
+        return; // Para a execução se houver bloqueio
+    }
     
     // Aplicar restrições visuais para jogadores
     aplicarRestricoesVisuais();
@@ -43,14 +229,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Aguardar um pouco para garantir que o Supabase foi carregado
     setTimeout(() => {
         initializePage();
-    }, 100);
+    }, 200); // Aumentei o delay para dar mais tempo
     
     // Recarregar fila automaticamente quando a janela ganha foco (usuário volta da partida)
     window.addEventListener('focus', () => {
-        console.log('🔄 Janela ganhou foco - recarregando fila...');
-        setTimeout(() => {
-            recarregarFila();
-        }, 500);
+        console.log('🔄 Janela ganhou foco - agendando reload da fila...');
+        debouncedReloadQueue();
     });
 
     // Event listeners para tela sem sessão
@@ -122,9 +306,20 @@ async function recarregarFila() {
 
 async function initializePage() {
     try {
+        console.log('🚀 Inicializando página da fila...');
+        
+        // Verificar se o Supabase está disponível
+        if (typeof supabase === 'undefined') {
+            console.error('❌ Supabase não foi carregado - problema de tracking prevention');
+            showError('Erro de conexão. Desabilite o bloqueador de rastreamento ou use modo privado.');
+            showNoSessionScreen();
+            return;
+        }
+        
         // Verificar se há uma sessão ativa
+        console.log('🔍 Verificando sessão ativa...');
         const sessao = await obterSessaoAtiva();
-        console.log('🔍 Sessão encontrada:', sessao);
+        console.log('� Sessão encontrada:', sessao);
         
         if (!sessao) {
             console.log('❌ Não há sessão ativa - mostrando tela de sessão vazia');
@@ -136,36 +331,82 @@ async function initializePage() {
         gameState.sessaoAtiva = sessao;
         
         // Carregar estado atual do jogo
+        console.log('📊 Carregando estado do jogo...');
         await loadGameState();
         
         // Renderizar interface
+        console.log('🎨 Renderizando interface...');
         await renderGameInterface();
         
+        // Verificar se deve abrir modal de gerenciamento
+        if (window.location.hash === '#gerenciar') {
+            console.log('🔄 Hash #gerenciar detectado - abrindo modal...');
+            // Limpar o hash da URL
+            window.history.replaceState(null, null, window.location.pathname);
+            // Abrir modal de gerenciamento
+            setTimeout(() => {
+                mostrarGerenciamento();
+            }, 500); // Pequeno delay para garantir que a interface foi renderizada
+        }
+        
+        console.log('✅ Página inicializada com sucesso!');
+        
     } catch (error) {
-        console.error('Erro ao inicializar página:', error);
-        showError('Erro ao carregar dados do jogo');
+        console.error('❌ Erro ao inicializar página:', error);
+        
+        // Verificar se é erro de conexão/tracking
+        if (error.message?.includes('Failed to fetch') || 
+            error.message?.includes('blocked') || 
+            error.message?.includes('network')) {
+            showError('Erro de conexão. Verifique sua internet ou desabilite bloqueadores.');
+        } else {
+            showError('Erro ao carregar dados do jogo: ' + error.message);
+        }
+        
+        showNoSessionScreen();
     }
 }
 
 async function loadGameState() {
     try {
+        console.log('📊 Carregando estado do jogo para sessão:', gameState.sessaoAtiva.id);
+        
         // Buscar times jogando atual
+        console.log('🔍 Buscando jogos da sessão...');
         const jogos = await obterJogos(gameState.sessaoAtiva.id);
+        console.log('🎮 Jogos encontrados:', jogos.length);
+        
         const ultimoJogo = jogos.length > 0 ? jogos[jogos.length - 1] : null;
+        console.log('🎯 Último jogo:', ultimoJogo);
         
         if (ultimoJogo && ultimoJogo.status === 'em_andamento') {
             // Há um jogo em andamento
             gameState.currentGame.time1 = ultimoJogo.time_a || [];
             gameState.currentGame.time2 = ultimoJogo.time_b || [];
             gameState.currentGame.gameNumber = ultimoJogo.numero_jogo || jogos.length;
+            console.log('🏃‍♂️ Jogo em andamento detectado - times carregados');
+        } else {
+            console.log('⏸️ Nenhum jogo em andamento');
         }
         
         // Buscar fila
+        console.log('📋 Buscando fila da sessão...');
         const fila = await obterFila(gameState.sessaoAtiva.id);
+        console.log('📋 Fila encontrada:', fila.length, 'jogadores');
+        
         gameState.queue = fila.sort((a, b) => a.posicao_fila - b.posicao_fila);
+        console.log('📋 Fila ordenada:', gameState.queue.map(p => `${p.posicao_fila}: ${p.nome || p.jogador?.nome}`));
+        
+        // Adicionar botão de teste temporário se fila vazia
+        if (gameState.queue.length === 0) {
+            console.log('⚠️ FILA VAZIA - Adicionando botão de teste...');
+            addTestButton();
+        }
         
         // Buscar reservas (jogadores não na fila nem jogando)
+        console.log('👥 Buscando todos os jogadores...');
         const todosJogadores = await obterJogadores();
+        console.log('👥 Total de jogadores cadastrados:', todosJogadores.length);
         
         const jogandoIds = [
             ...gameState.currentGame.time1.map(p => p.id),
@@ -177,14 +418,74 @@ async function loadGameState() {
             !jogandoIds.includes(j.id) && !filaIds.includes(j.id)
         );
         
-
+        console.log('🪑 Reservas encontradas:', gameState.reserves.length);
+        console.log('📊 Estado carregado:', {
+            sessao: gameState.sessaoAtiva.id,
+            fila: gameState.queue.length,
+            reservas: gameState.reserves.length,
+            time1: gameState.currentGame.time1.length,
+            time2: gameState.currentGame.time2.length
+        });
         
         // Calcular vitórias consecutivas
         await calculateConsecutiveWins();
         
+        console.log('✅ Estado do jogo carregado com sucesso!');
+        
     } catch (error) {
-        console.error('Erro ao carregar estado do jogo:', error);
+        console.error('❌ Erro ao carregar estado do jogo:', error);
         throw error;
+    }
+}
+
+// Função temporária para adicionar botão de teste
+function addTestButton() {
+    const container = document.querySelector('.container');
+    if (!container) return;
+    
+    const testDiv = document.createElement('div');
+    testDiv.innerHTML = `
+        <div style="background: #ff9800; color: white; padding: 15px; border-radius: 10px; margin: 10px 0; text-align: center;">
+            <p style="margin: 0 0 10px 0; font-weight: bold;">🧪 MODO TESTE - Fila Vazia</p>
+            <button onclick="adicionarJogadoresTesteFila()" style="
+                background: white; color: #ff9800; border: none; padding: 10px 20px; 
+                border-radius: 5px; font-weight: bold; cursor: pointer;
+            ">
+                ➕ Adicionar Jogadores de Teste na Fila
+            </button>
+        </div>
+    `;
+    container.insertBefore(testDiv, container.firstChild);
+}
+
+// Função para adicionar jogadores de teste na fila
+async function adicionarJogadoresTesteFila() {
+    try {
+        console.log('🧪 Adicionando jogadores de teste na fila...');
+        
+        // Pegar alguns jogadores das reservas
+        const jogadoresParaTeste = gameState.reserves.slice(0, 12);
+        console.log('👥 Jogadores para teste:', jogadoresParaTeste.map(p => p.nome));
+        
+        for (let i = 0; i < jogadoresParaTeste.length; i++) {
+            const jogador = jogadoresParaTeste[i];
+            await adicionarJogadorFila(gameState.sessaoAtiva.id, jogador.id, i + 1);
+            console.log(`➕ Adicionado: ${jogador.nome} na posição ${i + 1}`);
+        }
+        
+        // Recarregar estado
+        await loadGameState();
+        await renderGameInterface();
+        
+        console.log('✅ Jogadores de teste adicionados!');
+        
+        // Remover botão de teste
+        const testDiv = document.querySelector('div[style*="background: #ff9800"]');
+        if (testDiv) testDiv.remove();
+        
+    } catch (error) {
+        console.error('❌ Erro ao adicionar jogadores de teste:', error);
+        alert('Erro ao adicionar jogadores de teste: ' + error.message);
     }
 }
 
@@ -228,21 +529,158 @@ async function calculateConsecutiveWins() {
     }
 }
 
+// ========== RENDERIZAÇÃO DIFERENCIAL ==========
+// Estado anterior para comparação e renderização diferencial
+let previousState = {
+    queue: [],
+    reserves: [],
+    currentGame: { time1: [], time2: [] },
+    stats: new Map(),
+    initialized: false
+};
+
+// Função para comparar estados e determinar o que precisa ser atualizado
+function getChangedComponents(newState) {
+    const changes = {
+        teams: false,
+        queue: false,
+        reserves: false,
+        stats: false,
+        header: false
+    };
+    
+    try {
+        // Verificar mudanças nos times
+        const time1Changed = JSON.stringify(newState.currentGame.time1) !== JSON.stringify(previousState.currentGame.time1);
+        const time2Changed = JSON.stringify(newState.currentGame.time2) !== JSON.stringify(previousState.currentGame.time2);
+        changes.teams = time1Changed || time2Changed;
+        
+        // Verificar mudanças na fila - usar verificação mais segura
+        const newQueueIds = (newState.queue || []).map(p => p.jogador_id || p.id || 'unknown');
+        const oldQueueIds = (previousState.queue || []).map(p => p.jogador_id || p.id || 'unknown');
+        changes.queue = JSON.stringify(newQueueIds) !== JSON.stringify(oldQueueIds);
+        
+        // Verificar mudanças nas reservas
+        const newReserveIds = (newState.reserves || []).map(p => p.id || 'unknown');
+        const oldReserveIds = (previousState.reserves || []).map(p => p.id || 'unknown');
+        changes.reserves = JSON.stringify(newReserveIds) !== JSON.stringify(oldReserveIds);
+        
+        // Verificar mudanças no cabeçalho (total de jogadores)
+        changes.header = (newState.queue || []).length !== (previousState.queue || []).length;
+        
+        // Log para debug
+        if (changes.teams || changes.queue || changes.reserves || changes.header) {
+            console.log('🔄 Mudanças detectadas:', changes);
+            console.log('🔍 Estado anterior:', {
+                queueLength: (previousState.queue || []).length,
+                reservesLength: (previousState.reserves || []).length
+            });
+            console.log('🔍 Estado novo:', {
+                queueLength: (newState.queue || []).length,
+                reservesLength: (newState.reserves || []).length
+            });
+        } else {
+            console.log('✅ Nenhuma mudança detectada - renderização otimizada');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao comparar estados:', error);
+        // Em caso de erro, assumir que tudo mudou para garantir renderização
+        return {
+            teams: true,
+            queue: true,
+            reserves: true,
+            stats: true,
+            header: true
+        };
+    }
+    
+    return changes;
+}
+
+// Função otimizada de renderização que só atualiza o que mudou
 async function renderGameInterface() {
-    // Atualizar informações do cabeçalho
-    updateHeaderInfo();
+    console.log('🎨 Iniciando renderização diferencial...');
     
-    // Renderizar times próximos (já calcula stats no cache)
-    await renderNextTeams();
-    
-    // Renderizar fila de espera (agora as stats já estão no cache)
-    await renderQueueBlocks();
-    
-    // Renderizar reservas
-    renderReserves();
-    
-    // Carregar estatísticas do dia
-    await carregarEstatisticasDia();
+    try {
+        // Construir novo estado com verificações de segurança
+        const newState = {
+            queue: gameState.queue ? [...gameState.queue] : [],
+            reserves: gameState.reserves ? [...gameState.reserves] : [],
+            currentGame: {
+                time1: gameState.currentGame?.time1 ? [...gameState.currentGame.time1] : [],
+                time2: gameState.currentGame?.time2 ? [...gameState.currentGame.time2] : []
+            }
+        };
+        
+        // Na primeira execução, renderizar tudo
+        if (!previousState.initialized) {
+            console.log('🚀 Primeira renderização - renderizando tudo...');
+            
+            updateHeaderInfo();
+            await renderNextTeams();
+            await renderQueueBlocks();
+            renderReserves();
+            
+            previousState = { ...newState, initialized: true };
+            
+            try {
+                await carregarEstatisticasDia();
+            } catch (statsError) {
+                console.warn('⚠️ Erro ao carregar estatísticas do dia:', statsError);
+            }
+            
+            console.log('✅ Primeira renderização concluída!');
+            return;
+        }
+        
+        // Verificar o que mudou
+        const changes = getChangedComponents(newState);
+        
+        // Renderizar apenas componentes que mudaram
+        if (changes.header) {
+            console.log('📊 Atualizando header...');
+            updateHeaderInfo();
+        }
+        
+        if (changes.teams) {
+            console.log('🏃‍♂️ Atualizando teams...');
+            await renderNextTeams();
+        }
+        
+        if (changes.queue) {
+            console.log('📋 Atualizando queue...');
+            await renderQueueBlocks();
+        }
+        
+        if (changes.reserves) {
+            console.log('🪑 Atualizando reserves...');
+            renderReserves();
+        }
+        
+        // Sempre carregar estatísticas do dia (leve e importante)
+        try {
+            await carregarEstatisticasDia();
+        } catch (statsError) {
+            console.warn('⚠️ Erro ao carregar estatísticas do dia:', statsError);
+        }
+        
+        // Atualizar estado anterior
+        previousState = { ...newState, initialized: true };
+        
+        console.log('✅ Renderização diferencial concluída!');
+    } catch (error) {
+        console.error('❌ Erro na renderização diferencial:', error);
+        
+        // Fallback: tentar renderização básica
+        try {
+            console.log('🔄 Tentando renderização básica...');
+            updateHeaderInfo();
+            await renderNextTeams();
+        } catch (fallbackError) {
+            console.error('❌ Erro na renderização básica:', fallbackError);
+        }
+    }
 }
 
 function updateHeaderInfo() {
@@ -284,7 +722,16 @@ async function calcularEstatisticasJogador(jogadorId) {
             return { jogos: 0, vitorias: 0, gols: 0 };
         }
 
-        const jogos = await obterJogos(gameState.sessaoAtiva.id);
+        // Cache de jogos da sessão para evitar múltiplas consultas
+        if (!calcularEstatisticasJogador._cachedJogos || 
+            Date.now() - calcularEstatisticasJogador._cacheTimestamp > 30000) {
+            
+            console.log('🔄 Atualizando cache de jogos da sessão...');
+            calcularEstatisticasJogador._cachedJogos = await obterJogos(gameState.sessaoAtiva.id);
+            calcularEstatisticasJogador._cacheTimestamp = Date.now();
+        }
+        
+        const jogos = calcularEstatisticasJogador._cachedJogos;
         
         // Filtrar apenas jogos do dia atual
         const jogosFinalizados = jogos.filter(j => {
@@ -341,55 +788,170 @@ async function calcularEstatisticasJogador(jogadorId) {
     }
 }
 
-
-
-// Cache para estatísticas dos jogadores
-let statsCache = new Map();
-
-// Função para renderizar os próximos times
-async function renderNextTeams() {
-    // Limpar cache para nova renderização
-    statsCache.clear();
+// Função otimizada para obter estatísticas com cache
+async function getPlayerStats(playerId) {
+    // Tentar obter do cache primeiro
+    let stats = getCachedStats(playerId);
     
-    // Pré-calcular estatísticas de todos os jogadores na fila
-    await preCalculateStats();
+    if (stats) {
+        return stats;
+    }
     
-    await renderTeam(1, 0, 6);  // Time 1: posições 0-5
-    await renderTeam(2, 6, 12); // Time 2: posições 6-11
-}
-
-// Função para pré-calcular todas as estatísticas
-async function preCalculateStats() {
-    const allPlayerIds = gameState.queue.map(p => p.jogador_id);
-    
-    for (const playerId of allPlayerIds) {
-        if (!statsCache.has(playerId)) {
-            const stats = await calcularEstatisticasJogador(playerId);
-            statsCache.set(playerId, stats);
-        }
+    // Se não estiver em cache, calcular e cachear
+    try {
+        stats = await calcularEstatisticasJogador(playerId);
+        setCachedStats(playerId, stats);
+        return stats;
+    } catch (error) {
+        console.error(`❌ Erro ao obter estatísticas do jogador ${playerId}:`, error);
+        // Retornar valores padrão em caso de erro
+        const defaultStats = { jogos: 0, vitorias: 0, gols: 0 };
+        setCachedStats(playerId, defaultStats);
+        return defaultStats;
     }
 }
 
-// Função para renderizar um time específico
-async function renderTeam(teamNumber, startIndex, endIndex) {
+
+
+// ========== CACHE INTELIGENTE DE ESTATÍSTICAS ==========
+// Cache otimizado com expiração temporal e invalidação inteligente
+let statsCache = new Map();
+const STATS_CACHE_DURATION = 60000; // 60 segundos
+let lastCacheInvalidation = Date.now();
+
+// Estrutura do cache:
+// { playerId: { stats: {...}, timestamp: number, version: number } }
+
+// Função para invalidar cache quando necessário
+function shouldInvalidateCache() {
+    const now = Date.now();
+    // Invalidar se passou mais de 60 segundos da última invalidação
+    if (now - lastCacheInvalidation > STATS_CACHE_DURATION) {
+        console.log('🗑️ Cache de estatísticas expirado - invalidando...');
+        statsCache.clear();
+        lastCacheInvalidation = now;
+        return true;
+    }
+    return false;
+}
+
+// Função para forçar invalidação completa do cache
+function forceInvalidateCache() {
+    console.log('🚀 Forçando invalidação completa do cache...');
+    statsCache.clear();
+    gameState.queue = null;
+    gameState.reserves = null;
+    lastCacheInvalidation = Date.now();
+}
+
+// Função para obter estatísticas do cache com verificação de validade
+function getCachedStats(playerId) {
+    const cached = statsCache.get(playerId);
+    if (!cached) return null;
+    
+    const now = Date.now();
+    // Verificar se o cache ainda é válido
+    if (now - cached.timestamp < STATS_CACHE_DURATION) {
+        return cached.stats;
+    }
+    
+    // Cache expirado para este jogador
+    statsCache.delete(playerId);
+    return null;
+}
+
+// Função para salvar no cache
+function setCachedStats(playerId, stats) {
+    statsCache.set(playerId, {
+        stats: stats,
+        timestamp: Date.now(),
+        version: 1
+    });
+}
+
+// Função para renderizar os próximos times com loading e fallback (SIMPLIFICADA)
+async function renderNextTeams() {
+    console.log('🏃‍♂️ Iniciando renderização dos times...');
+    
+    // Se não há jogadores na fila, renderizar times vazios
+    if (!gameState.queue || gameState.queue.length === 0) {
+        console.log('⚠️ Fila vazia - renderizando times vazios');
+        
+        // Renderizar times vazios diretamente
+        const tbody1 = document.getElementById('team1-body');
+        const tbody2 = document.getElementById('team2-body');
+        
+        if (tbody1) {
+            tbody1.innerHTML = `
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+            `;
+        }
+        
+        if (tbody2) {
+            tbody2.innerHTML = `
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+                <tr class="empty-row"><td class="player-name-cell">Aguardando jogador...</td></tr>
+            `;
+        }
+        
+        return;
+    }
+    
+    console.log(`📊 Total de jogadores na fila: ${gameState.queue.length}`);
+    console.log('🔍 Primeiros 12 jogadores:', gameState.queue.slice(0, 12).map(p => p.nome || p.jogador?.nome));
+    
+    try {
+        console.log('🎯 Renderizando time 1 (posições 0-5)...');
+        await renderTeamSimple(1, 0, 6);  // Time 1: posições 0-5
+        
+        console.log('🎯 Renderizando time 2 (posições 6-11)...');
+        await renderTeamSimple(2, 6, 12); // Time 2: posições 6-11
+        
+        console.log('✅ Renderização dos times concluída!');
+    } catch (error) {
+        console.error('❌ Erro ao renderizar times:', error);
+        
+        // Fallback: renderizar times com erro
+        const tbody1 = document.getElementById('team1-body');
+        const tbody2 = document.getElementById('team2-body');
+        
+        if (tbody1) tbody1.innerHTML = '<tr><td class="player-name-cell">Erro ao carregar time 1...</td></tr>';
+        if (tbody2) tbody2.innerHTML = '<tr><td class="player-name-cell">Erro ao carregar time 2...</td></tr>';
+    }
+}
+
+// Função simplificada para renderizar um time (SEM estatísticas por enquanto)
+async function renderTeamSimple(teamNumber, startIndex, endIndex) {
     const tbody = document.getElementById(`team${teamNumber}-body`);
-    if (!tbody) return;
+    if (!tbody) {
+        console.error(`❌ Elemento team${teamNumber}-body não encontrado`);
+        return;
+    }
+    
+    console.log(`🏃‍♂️ Renderizando time ${teamNumber}, posições ${startIndex}-${endIndex-1}`);
     
     const teamPlayers = gameState.queue.slice(startIndex, endIndex);
     
-    // Preencher com slots vazios se necessário
-    while (teamPlayers.length < 6) {
-        teamPlayers.push(null);
-    }
+    console.log(`👥 Time ${teamNumber} players:`, teamPlayers.map(p => p.nome || p.jogador?.nome));
     
     let html = '';
-    for (let i = 0; i < teamPlayers.length; i++) {
+    for (let i = 0; i < 6; i++) {
         const player = teamPlayers[i];
         
         if (player) {
+            const playerName = player.nome || player.jogador?.nome || `Jogador ${player.jogador_id}`;
             html += `
                 <tr>
-                    <td class="player-name-cell">${player.nome || player.jogador?.nome}</td>
+                    <td class="player-name-cell">${playerName}</td>
                 </tr>
             `;
         } else {
@@ -402,9 +964,116 @@ async function renderTeam(teamNumber, startIndex, endIndex) {
     }
     
     tbody.innerHTML = html;
+    console.log(`✅ Time ${teamNumber} renderizado com ${teamPlayers.length} jogadores`);
 }
 
-// Função para renderizar os blocos da fila de espera
+// Função para pré-calcular todas as estatísticas de forma otimizada
+async function preCalculateStats() {
+    console.log('📊 Iniciando pré-cálculo otimizado de estatísticas...');
+    
+    // Verificar se há jogadores na fila
+    if (!gameState.queue || gameState.queue.length === 0) {
+        console.log('⚠️ Não há jogadores na fila para calcular estatísticas');
+        return;
+    }
+    
+    const allPlayerIds = gameState.queue.map(p => p.jogador_id);
+    console.log('👥 IDs dos jogadores na fila:', allPlayerIds);
+    
+    const uncachedPlayerIds = [];
+    
+    // Verificar quais jogadores não estão no cache ou têm cache expirado
+    for (const playerId of allPlayerIds) {
+        const cachedStats = getCachedStats(playerId);
+        if (!cachedStats) {
+            uncachedPlayerIds.push(playerId);
+        }
+    }
+    
+    console.log(`📈 Cache hit: ${allPlayerIds.length - uncachedPlayerIds.length}/${allPlayerIds.length} jogadores`);
+    
+    if (uncachedPlayerIds.length === 0) {
+        console.log('✅ Todas as estatísticas já estão em cache!');
+        return;
+    }
+    
+    // Calcular estatísticas em lote para jogadores sem cache
+    console.log(`🔄 Calculando estatísticas para ${uncachedPlayerIds.length} jogadores...`);
+    
+    // Processar em chunks menores para melhor responsividade
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < uncachedPlayerIds.length; i += CHUNK_SIZE) {
+        const chunk = uncachedPlayerIds.slice(i, i + CHUNK_SIZE);
+        
+        // Calcular chunk em paralelo
+        const promises = chunk.map(async (playerId) => {
+            try {
+                const stats = await calcularEstatisticasJogador(playerId);
+                setCachedStats(playerId, stats);
+                return { playerId, success: true };
+            } catch (error) {
+                console.error(`❌ Erro ao calcular estatísticas do jogador ${playerId}:`, error);
+                // Cache com valores padrão em caso de erro
+                setCachedStats(playerId, { jogos: 0, vitorias: 0, gols: 0 });
+                return { playerId, success: false, error };
+            }
+        });
+        
+        await Promise.all(promises);
+        
+        // Small delay between chunks to prevent blocking
+        if (i + CHUNK_SIZE < uncachedPlayerIds.length) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+    }
+    
+    console.log('✅ Pré-cálculo de estatísticas concluído!');
+}
+
+// Função para renderizar um time específico
+async function renderTeam(teamNumber, startIndex, endIndex) {
+    const tbody = document.getElementById(`team${teamNumber}-body`);
+    if (!tbody) {
+        console.error(`❌ Elemento team${teamNumber}-body não encontrado`);
+        return;
+    }
+    
+    console.log(`🏃‍♂️ Renderizando time ${teamNumber}, posições ${startIndex}-${endIndex-1}`);
+    
+    const teamPlayers = gameState.queue.slice(startIndex, endIndex);
+    
+    console.log(`👥 Time ${teamNumber} players:`, teamPlayers);
+    
+    // Preencher com slots vazios se necessário
+    while (teamPlayers.length < 6) {
+        teamPlayers.push(null);
+    }
+    
+    let html = '';
+    for (let i = 0; i < teamPlayers.length; i++) {
+        const player = teamPlayers[i];
+        
+        if (player) {
+            const playerName = player.nome || player.jogador?.nome || 'Nome não encontrado';
+            html += `
+                <tr>
+                    <td class="player-name-cell">${playerName}</td>
+                </tr>
+            `;
+        } else {
+            html += `
+                <tr class="empty-row">
+                    <td class="player-name-cell">Aguardando jogador...</td>
+                </tr>
+            `;
+        }
+    }
+    
+    tbody.innerHTML = html;
+    console.log(`✅ Time ${teamNumber} renderizado com ${teamPlayers.filter(p => p).length} jogadores`);
+}
+
+// Função para renderizar os blocos da fila de espera com loading
 async function renderQueueBlocks() {
     const container = document.getElementById('queue-blocks-container');
     const queueCount = document.getElementById('queue-count');
@@ -415,6 +1084,14 @@ async function renderQueueBlocks() {
     }
     
     if (!container) return;
+    
+    // Mostrar skeleton se há muitos jogadores para processar
+    if (gameState.queue.length > 12) {
+        showQueueSkeleton();
+        
+        // Small delay to show skeleton
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
     
     // Jogadores a partir da posição 13 (índice 12)
     const waitingPlayers = gameState.queue.slice(12);
@@ -849,8 +1526,22 @@ function mostrarOpcoesGerenciamento() {
     }
 }
 
-// Função para mostrar painel de gerenciamento
+// Função para mostrar painel de gerenciamento UNIFICADO
 function mostrarGerenciamento() {
+    // Verificar se o novo painel está disponível
+    const unifiedPanel = document.querySelector('.management-content-unified');
+    
+    if (unifiedPanel) {
+        // Usar novo painel unificado
+        mostrarGerenciamentoUnificado();
+    } else {
+        // Fallback para painel antigo
+        mostrarGerenciamentoAntigo();
+    }
+}
+
+// Função do painel antigo (backup)
+function mostrarGerenciamentoAntigo() {
     // Verificar permissão
     if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
         return;
@@ -874,6 +1565,13 @@ function fecharGerenciamento() {
     const painel = document.getElementById('painel-gerenciamento');
     if (painel) {
         painel.style.display = 'none';
+    }
+    
+    // Se usando painel unificado, limpar estado
+    if (unifiedManagementState && unifiedManagementState.isOpen) {
+        unifiedManagementState.isOpen = false;
+        unifiedManagementState.changes = [];
+        unifiedManagementState.draggedElement = null;
     }
 }
 
@@ -934,14 +1632,14 @@ async function mostrarAdicionar() {
 async function renderPlayersForSelection(players, operacao) {
     let html = '';
     
-    // Pré-calcular todas as estatísticas primeiro
+    // Pré-calcular todas as estatísticas primeiro (usando cache otimizado)
     const playerIds = players.map(p => p.id || p.jogador_id);
     await preCalculateStatsForPlayers(playerIds);
     
     for (const jogador of players) {
         // Para remover da fila, sempre usar jogador_id, não o id do registro da fila
         const jogadorId = jogador.jogador_id || jogador.id;  // Priorizar jogador_id
-        const stats = statsCache.get(jogadorId) || { jogos: 0, vitorias: 0, gols: 0 };
+        const stats = getCachedStats(jogadorId) || { jogos: 0, vitorias: 0, gols: 0 };
         const playerId = jogadorId;
         const playerName = jogador.nome || jogador.jogador?.nome;
         
@@ -961,32 +1659,85 @@ async function renderPlayersForSelection(players, operacao) {
 
 // Função otimizada para pré-calcular estatísticas
 async function preCalculateStatsForPlayers(playerIds) {
-    const uncachedIds = playerIds.filter(id => !statsCache.has(id));
+    const uncachedIds = playerIds.filter(id => !getCachedStats(id));
     
-    if (uncachedIds.length === 0) return;
+    if (uncachedIds.length === 0) {
+        console.log('✅ Todas as estatísticas já estão em cache!');
+        return;
+    }
+    
+    console.log(`🔄 Calculando estatísticas para ${uncachedIds.length} jogadores em lote...`);
     
     // Calcular em paralelo para melhor performance
     const promises = uncachedIds.map(async (playerId) => {
-        const stats = await calcularEstatisticasJogador(playerId);
-        statsCache.set(playerId, stats);
-        return stats;
+        try {
+            const stats = await calcularEstatisticasJogador(playerId);
+            setCachedStats(playerId, stats);
+            return stats;
+        } catch (error) {
+            console.error(`❌ Erro ao calcular estatísticas do jogador ${playerId}:`, error);
+            const defaultStats = { jogos: 0, vitorias: 0, gols: 0 };
+            setCachedStats(playerId, defaultStats);
+            return defaultStats;
+        }
     });
     
     await Promise.all(promises);
+    console.log('✅ Pré-cálculo otimizado concluído!');
 }
 
-// Função para adicionar event listeners aos jogadores
+// ========== CLEANUP DE EVENT LISTENERS ==========
+// Registro de event listeners para cleanup adequado
+const eventListenerRegistry = new Map();
+
+// Função para adicionar listener com cleanup automático
+function addManagedEventListener(element, event, handler, identifier) {
+    // Remove listener anterior se existir
+    if (eventListenerRegistry.has(identifier)) {
+        const { element: oldEl, event: oldEvent, handler: oldHandler } = eventListenerRegistry.get(identifier);
+        oldEl.removeEventListener(oldEvent, oldHandler);
+    }
+    
+    // Adiciona novo listener
+    element.addEventListener(event, handler);
+    eventListenerRegistry.set(identifier, { element, event, handler });
+}
+
+// Função para limpar todos os listeners
+function cleanupAllEventListeners() {
+    console.log('🧹 Limpando event listeners...');
+    eventListenerRegistry.forEach(({ element, event, handler }) => {
+        element.removeEventListener(event, handler);
+    });
+    eventListenerRegistry.clear();
+}
+
+// Função para adicionar event listeners aos jogadores com cleanup
 function adicionarEventListenersJogadores() {
     const playerItems = document.querySelectorAll('.player-item-modal');
     
-    playerItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const playerId = this.dataset.playerId; // Não usar parseInt() - pode ser UUID
+    // Limpar listeners anteriores dos items de jogador
+    playerItems.forEach((item, index) => {
+        const identifier = `player-item-${index}`;
+        
+        // Remove listener anterior se existir
+        if (eventListenerRegistry.has(identifier)) {
+            const { element: oldEl, event: oldEvent, handler: oldHandler } = eventListenerRegistry.get(identifier);
+            oldEl.removeEventListener(oldEvent, oldHandler);
+        }
+        
+        // Criar novo handler
+        const handler = function() {
+            const playerId = this.dataset.playerId;
             const playerName = this.dataset.playerName;
             const operacao = this.dataset.operacao;
             
             selecionarJogador(playerId, playerName, operacao);
-        });
+        };
+        
+        // Adicionar novo listener
+        item.addEventListener('click', handler);
+        eventListenerRegistry.set(identifier, { element: item, event: 'click', handler });
     });
 }
 
@@ -1233,14 +1984,17 @@ async function executarAdicionar(jogadorId) {
             return;
         }
         
-        // Adicionar jogador ao final da fila
-        const proximaPosicao = gameState.queue.length + 1;
-        
-        await adicionarJogadorFila(gameState.sessaoAtiva.id, jogadorId, proximaPosicao);
-        
-        // Atualizar estado local
-        await loadGameState();
-        await renderGameInterface();
+        // Mostrar loading durante operação
+        await withLoading('queue-card', async () => {
+            // Adicionar jogador ao final da fila
+            const proximaPosicao = gameState.queue.length + 1;
+            
+            await adicionarJogadorFila(gameState.sessaoAtiva.id, jogadorId, proximaPosicao);
+            
+            // Atualizar estado local
+            await loadGameState();
+            await debouncedRenderInterface();
+        });
         
         // Verificar se mudança afeta partida ativa
         await verificarMudancaTimesPartida();
@@ -1320,25 +2074,21 @@ async function atualizarPosicaoFila(sessaoId, jogadorId, novaPosicao) {
             client = initializeSupabase();
         }
         
-        // Verificar se o jogador existe e pegar seu UUID real
-        const { data: jogadorData, error: jogadorError } = await client
-            .from('jogadores')
-            .select('id')
-            .eq('id', jogadorId)
-            .single();
+        console.log(`🔄 Atualizando posição: Jogador ${jogadorId} → Posição ${novaPosicao}`);
         
-        if (jogadorError) {
-            throw new Error(`Jogador não encontrado: ${jogadorError.message}`);
-        }
-        
+        // Atualizar diretamente sem verificar se existe
         const { error } = await client
             .from('fila')
             .update({ posicao_fila: novaPosicao })
             .eq('sessao_id', sessaoId)
-            .eq('jogador_id', jogadorData.id);
+            .eq('jogador_id', jogadorId);
         
-        if (error) throw error;
-        return true;
+        if (error) {
+            throw new Error(`Erro ao atualizar posição: ${error.message}`);
+        }
+        
+        console.log(`✅ Posição atualizada: Jogador ${jogadorId} agora na posição ${novaPosicao}`);
+        
     } catch (error) {
         console.error('Erro ao atualizar posição na fila:', error);
         throw error;
@@ -1870,12 +2620,17 @@ function renderSortableList() {
     let html = '';
     
     gameState.queue.forEach((player, index) => {
+        const isSelected = unifiedManagementState.doubleClickSelection.isActive && 
+                          unifiedManagementState.doubleClickSelection.selectedIndex === index &&
+                          unifiedManagementState.doubleClickSelection.selectedType === 'queue';
+        
         html += `
-            <div class="sortable-item" draggable="true" data-index="${index}">
+            <div class="sortable-item ${isSelected ? 'selected-for-swap' : ''}" draggable="true" data-index="${index}" data-type="queue">
                 <div class="drag-handle"></div>
-                <div class="sortable-player-info">
+                <div class="sortable-player-info" ondblclick="handlePlayerDoubleClick(${index}, 'queue')">
                     <div class="sortable-position">${index + 1}</div>
                     <div class="sortable-name">${player.nome || player.jogador?.nome}</div>
+                    ${isSelected ? '<div class="swap-indicator">🔄</div>' : ''}
                 </div>
             </div>
         `;
@@ -2236,4 +2991,997 @@ function confirmarIniciarPartida() {
         resolveModalIniciarPartida(true);
         resolveModalIniciarPartida = null;
     }
+}
+
+// ========== NOVO PAINEL DE GERENCIAMENTO UNIFICADO ==========
+
+// Estado do novo painel de gerenciamento
+const unifiedManagementState = {
+    isOpen: false,
+    originalQueue: [],
+    originalReserves: [],
+    workingQueue: [],
+    workingReserves: [],
+    changes: [],
+    draggedElement: null,
+    searchTerm: '',
+    previewVisible: true,
+    // Sistema de duplo-clique para troca
+    doubleClickSelection: {
+        selectedPlayer: null,
+        selectedIndex: null,
+        selectedType: null, // 'queue' ou 'reserve'
+        isActive: false
+    },
+    cache: {
+        queueList: null,
+        reservesList: null,
+        lastUpdate: 0,
+        ttl: 30000 // 30 segundos
+    }
+};
+
+// Cache inteligente para listas de jogadores
+function getCachedList(type) {
+    const now = Date.now();
+    if (now - unifiedManagementState.cache.lastUpdate > unifiedManagementState.cache.ttl) {
+        unifiedManagementState.cache = {
+            queueList: null,
+            reservesList: null,
+            lastUpdate: 0,
+            ttl: 30000
+        };
+        return null;
+    }
+    return unifiedManagementState.cache[type];
+}
+
+function setCachedList(type, html) {
+    unifiedManagementState.cache[type] = html;
+    unifiedManagementState.cache.lastUpdate = Date.now();
+}
+
+// Função principal para mostrar o painel unificado
+async function mostrarGerenciamentoUnificado() {
+    console.log('📋 Abrindo modal de gerenciamento unificado...');
+    
+    // Verificar permissões
+    if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
+        return;
+    }
+
+    const modal = document.getElementById('gerenciamento-modal');
+    if (!modal) {
+        console.error('Modal de gerenciamento não encontrado!');
+        return;
+    }
+
+    // Debug do gameState
+    console.log('🎮 Estado atual do jogo:', {
+        queue: gameState.queue,
+        reserves: gameState.reserves,
+        queueLength: gameState.queue?.length || 0,
+        reservesLength: gameState.reserves?.length || 0
+    });
+
+    // Inicializar estado unificado
+    unifiedManagementState.isOpen = true;
+    unifiedManagementState.originalQueue = [...(gameState.queue || [])];
+    unifiedManagementState.originalReserves = [...(gameState.reserves || [])];
+    unifiedManagementState.filaLocal = [...(gameState.queue || [])];
+    unifiedManagementState.reservasLocal = [...(gameState.reserves || [])];
+    unifiedManagementState.changes = [];
+
+    // Mostrar modal fullscreen
+    modal.style.display = 'block';
+    modal.classList.add('active');
+    
+    // Carregar listas
+    setupUnifiedManagement();
+    
+    // Carregar listas
+    await loadUnifiedLists();
+    
+    // Atualizar contadores
+    updateCountersAndInterface();
+    
+    console.log('✅ Painel de gerenciamento carregado');
+}
+
+// Setup dos event listeners do painel unificado
+function setupUnifiedManagement() {
+    // Busca de jogadores
+    const searchInput = document.getElementById('search-players');
+    if (searchInput) {
+        // Remove existing listeners
+        const newSearchInput = searchInput.cloneNode(true);
+        searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+        
+        newSearchInput.addEventListener('input', debounce((e) => {
+            unifiedManagementState.searchTerm = e.target.value.toLowerCase();
+            filterPlayerLists();
+        }, 300));
+    }
+
+    // Click no painel para fechar
+    const painel = document.getElementById('painel-gerenciamento');
+    if (painel) {
+        painel.onclick = function(e) {
+            if (e.target === painel) {
+                fecharGerenciamento();
+            }
+        };
+    }
+}
+
+// Carregar listas no painel unificado
+async function loadUnifiedLists() {
+    const reservesList = document.getElementById('reservas-list');
+    const queueList = document.getElementById('fila-list');
+    
+    if (!reservesList || !queueList) {
+        console.error('Elementos da lista não encontrados:', { reservesList, queueList });
+        return;
+    }
+
+    try {
+        // Sempre recarregar as listas com os dados locais
+        const reservesHTML = await renderDragPlayersList(unifiedManagementState.reservasLocal, 'reserve');
+        const queueHTML = await renderDragPlayersList(unifiedManagementState.filaLocal, 'queue');
+
+        reservesList.innerHTML = reservesHTML;
+        queueList.innerHTML = queueHTML;
+
+        // Setup drag & drop
+        setupDragAndDrop();
+        
+        console.log('✅ Listas carregadas:', {
+            reservas: unifiedManagementState.reservasLocal.length,
+            fila: unifiedManagementState.filaLocal.length
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar listas:', error);
+        reservesList.innerHTML = '<div class="loading-placeholder">Erro ao carregar reservas</div>';
+        queueList.innerHTML = '<div class="loading-placeholder">Erro ao carregar fila</div>';
+    }
+}
+
+// Renderizar lista de jogadores para drag & drop
+async function renderDragPlayersList(players, type) {
+    if (!players || players.length === 0) {
+        return `<div class="drop-zone">
+            <span>${type === 'reserve' ? '🪑 Nenhuma reserva' : '📋 Fila vazia'}</span>
+        </div>`;
+    }
+
+    console.log(`🎮 Renderizando ${type}:`, players); // Debug
+
+    let html = '';
+    for (let i = 0; i < players.length; i++) {
+        const player = players[i];
+        const position = type === 'queue' ? i + 1 : 'R';
+        
+        // Para fila, o nome está em player.jogador.nome
+        // Para reservas, o nome está diretamente em player.nome
+        let nomeJogador;
+        
+        if (type === 'queue' && player.jogador) {
+            // Estrutura da fila: { jogador_id, posicao_fila, jogador: { id, nome, ... } }
+            nomeJogador = player.jogador.nome || player.jogador.nome_usuario || `Jogador #${player.jogador.id}`;
+        } else {
+            // Estrutura das reservas: { id, nome, nome_usuario, ... }
+            nomeJogador = player.nome || 
+                         player.nome_usuario || 
+                         player.nome_completo || 
+                         player.apelido || 
+                         `Jogador #${player.id}`;
+        }
+        
+        console.log(`🔍 Jogador ${i} (${type}):`, {
+            player: player,
+            nomeEncontrado: nomeJogador,
+            estrutura: type === 'queue' ? 'fila-aninhada' : 'reserva-direta'
+        });
+        
+        html += `
+        <div class="drag-player-item ${type}-item" 
+             draggable="true" 
+             ondblclick="handlePlayerDoubleClick(${i}, '${type}')"
+             data-player-id="${type === 'queue' ? player.jogador_id : player.id}"
+             data-type="${type}"
+             data-position="${i}">
+            <div class="player-position">${position}</div>
+            <div class="player-name">${nomeJogador}</div>
+        </div>`;
+    }
+
+    return html;
+}
+
+// Setup de drag & drop
+function setupDragAndDrop() {
+    // Drag start para items dos jogadores
+    document.querySelectorAll('.drag-player-item').forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+    });
+
+    // Drop zones para as colunas
+    document.querySelectorAll('.players-list').forEach(zone => {
+        zone.addEventListener('dragover', handleDragOver);
+        zone.addEventListener('drop', handleDrop);
+        zone.addEventListener('dragenter', handleDragEnter);
+        zone.addEventListener('dragleave', handleDragLeave);
+    });
+    
+    // Drop em items específicos para reordenação dentro da fila
+    document.querySelectorAll('.drag-player-item').forEach(item => {
+        item.addEventListener('dragover', handleItemDragOver);
+        item.addEventListener('drop', handleItemDrop);
+    });
+}
+
+function handleDragStart(e) {
+    const item = e.target;
+    unifiedManagementState.draggedElement = {
+        playerId: item.dataset.playerId,
+        type: item.dataset.type,
+        position: parseInt(item.dataset.position),
+        element: item
+    };
+    
+    item.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+    unifiedManagementState.draggedElement = null;
+    
+    // Remover classes de drag over
+    document.querySelectorAll('.drop-zone.drag-over').forEach(zone => {
+        zone.classList.remove('drag-over');
+    });
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragEnter(e) {
+    e.preventDefault();
+    if (e.target.classList.contains('player-list-drag') || e.target.classList.contains('drop-zone')) {
+        e.target.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+}
+
+// Drag over em items específicos (para reordenação)
+function handleItemDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!unifiedManagementState.draggedElement) return;
+    
+    const targetItem = e.currentTarget;
+    const targetType = targetItem.dataset.type;
+    const sourceType = unifiedManagementState.draggedElement.type;
+    
+    // Só permitir reordenação dentro da mesma lista
+    if (sourceType === targetType && sourceType === 'queue') {
+        e.dataTransfer.dropEffect = 'move';
+        targetItem.classList.add('drag-over-item');
+    }
+}
+
+// Drop em items específicos (para reordenação)
+async function handleItemDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const targetItem = e.currentTarget;
+    targetItem.classList.remove('drag-over-item');
+    
+    if (!unifiedManagementState.draggedElement) return;
+    
+    const sourceType = unifiedManagementState.draggedElement.type;
+    const targetType = targetItem.dataset.type;
+    const sourcePosition = unifiedManagementState.draggedElement.position;
+    const targetPosition = parseInt(targetItem.dataset.position);
+    
+    // Só permitir reordenação dentro da fila
+    if (sourceType !== 'queue' || targetType !== 'queue') return;
+    if (sourcePosition === targetPosition) return;
+    
+    console.log(`🔄 Reordenando fila: posição ${sourcePosition + 1} → ${targetPosition + 1}`);
+    
+    // Realizar reordenação
+    await reorderQueue(sourcePosition, targetPosition);
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    if (!unifiedManagementState.draggedElement) return;
+
+    const targetZone = e.currentTarget;
+    const sourceType = unifiedManagementState.draggedElement.type;
+    
+    // Determinar tipo de destino baseado nas classes da zona
+    let targetType;
+    if (targetZone.id === 'fila-list' || targetZone.closest('.fila-section')) {
+        targetType = 'queue';
+    } else if (targetZone.id === 'reservas-list' || targetZone.closest('.reservas-section')) {
+        targetType = 'reserve';
+    } else {
+        return; // Zona não reconhecida
+    }
+    
+    // Se não houve mudança de tipo, ignorar (reordenação é tratada em handleItemDrop)
+    if (sourceType === targetType) return;
+    
+    const playerId = unifiedManagementState.draggedElement.playerId;
+    const player = findPlayerById(playerId);
+    
+    if (!player) return;
+
+    console.log(`📋 Movendo jogador: ${sourceType} → ${targetType}`, player);
+
+    // Realizar a operação
+    if (sourceType === 'reserve' && targetType === 'queue') {
+        // Mover da reserva para fila
+        await movePlayerReserveToQueue(player);
+    } else if (sourceType === 'queue' && targetType === 'reserve') {
+        // Mover da fila para reserva
+        await movePlayerQueueToReserve(player);
+    }
+}
+
+// Operações de movimentação
+async function reorderQueue(fromIndex, toIndex) {
+    // Salvar ordem anterior para desfazer
+    const oldOrder = [...unifiedManagementState.filaLocal];
+    
+    // Remover jogador da posição original
+    const [movedPlayer] = unifiedManagementState.filaLocal.splice(fromIndex, 1);
+    
+    // Inserir na nova posição
+    unifiedManagementState.filaLocal.splice(toIndex, 0, movedPlayer);
+    
+    // Registrar mudança para desfazer
+    unifiedManagementState.changes.push({
+        type: 'reorder',
+        oldOrder: oldOrder,
+        newOrder: [...unifiedManagementState.filaLocal],
+        description: `Moveu ${movedPlayer.jogador?.nome || movedPlayer.nome} da posição ${fromIndex + 1} para ${toIndex + 1}`
+    });
+    
+    // Recarregar listas
+    await reloadListsAfterChange();
+    
+    console.log(`✅ Fila reordenada: ${movedPlayer.jogador?.nome || movedPlayer.nome} movido para posição ${toIndex + 1}`);
+}
+
+async function movePlayerReserveToQueue(player) {
+    const playerId = player.jogador_id || player.id;
+    
+    // Remover da reserva local
+    unifiedManagementState.reservasLocal = unifiedManagementState.reservasLocal
+        .filter(p => (p.jogador_id || p.id) !== playerId);
+    
+    // Adicionar à fila local
+    unifiedManagementState.filaLocal.push(player);
+    
+    // Registrar mudança
+    unifiedManagementState.changes.push({
+        type: 'add_to_queue',
+        player: player,
+        position: unifiedManagementState.filaLocal.length - 1
+    });
+    
+    // Recarregar listas
+    await reloadListsAfterChange();
+}
+
+async function movePlayerQueueToReserve(player) {
+    const playerId = player.jogador_id || player.id;
+    
+    // Encontrar posição na fila
+    const oldPosition = unifiedManagementState.filaLocal.findIndex(
+        p => (p.jogador_id || p.id) === playerId
+    );
+    
+    // Remover da fila local
+    unifiedManagementState.filaLocal = unifiedManagementState.filaLocal
+        .filter(p => (p.jogador_id || p.id) !== playerId);
+    
+    // Adicionar às reservas locais
+    unifiedManagementState.reservasLocal.push(player);
+    
+    // Registrar mudança
+    unifiedManagementState.changes.push({
+        type: 'remove_from_queue',
+        player: player,
+        oldPosition: oldPosition
+    });
+    
+    // Recarregar listas
+    await reloadListsAfterChange();
+}
+
+// Recarregar listas após mudanças
+async function reloadListsAfterChange() {
+    // Recarregar listas
+    await loadUnifiedLists();
+    
+    // Atualizar contadores e interface
+    updateCountersAndInterface();
+}
+
+// Atualizar contadores e interface
+function updateCountersAndInterface() {
+    const reservesCount = document.getElementById('reservas-count');
+    const queueCount = document.getElementById('fila-count');
+    
+    if (reservesCount) reservesCount.textContent = `(${unifiedManagementState.reservasLocal.length})`;
+    if (queueCount) queueCount.textContent = `(${unifiedManagementState.filaLocal.length})`;
+    
+    updateActionButtons();
+}
+
+// Atualizar botões de ação
+function updateActionButtons() {
+    const btnAplicar = document.querySelector('.btn-aplicar');
+    const btnDesfazer = document.querySelector('.btn-desfazer');
+    
+    const hasChanges = unifiedManagementState.changes.length > 0;
+    
+    // Atualizar botão aplicar
+    if (btnAplicar) {
+        btnAplicar.disabled = !hasChanges;
+        btnAplicar.innerHTML = hasChanges 
+            ? `✅ Aplicar (${unifiedManagementState.changes.length})` 
+            : '✅ Aplicar';
+    }
+    
+    // Atualizar botão desfazer
+    if (btnDesfazer) {
+        btnDesfazer.disabled = !hasChanges;
+    }
+    
+    console.log('✅ Botões atualizados:', {
+        hasChanges,
+        changesCount: unifiedManagementState.changes.length
+    });
+}
+
+// Utilitários
+function findPlayerById(playerId) {
+    return [...unifiedManagementState.filaLocal, ...unifiedManagementState.reservasLocal]
+        .find(p => (p.jogador_id || p.id) == playerId);
+}
+
+function filterPlayerLists() {
+    // TODO: Implementar filtro por nome
+    console.log('Filtrar por:', unifiedManagementState.searchTerm);
+}
+
+// Funções dos botões
+function undoLastChange() {
+    if (unifiedManagementState.changes.length === 0) return;
+    
+    const lastChange = unifiedManagementState.changes.pop();
+    
+    // Reverter a operação
+    if (lastChange.type === 'add_to_queue') {
+        // Reverter: remover da fila e voltar para reserva
+        const playerId = lastChange.player.jogador_id || lastChange.player.id;
+        unifiedManagementState.workingQueue = unifiedManagementState.workingQueue
+            .filter(p => (p.jogador_id || p.id) !== playerId);
+        unifiedManagementState.workingReserves.push(lastChange.player);
+    } else if (lastChange.type === 'remove_from_queue') {
+        // Reverter: remover da reserva e voltar para fila
+        const playerId = lastChange.player.jogador_id || lastChange.player.id;
+        unifiedManagementState.workingReserves = unifiedManagementState.workingReserves
+            .filter(p => (p.jogador_id || p.id) !== playerId);
+        // Inserir na posição correta (lastChange.oldPosition - 1)
+        const insertIndex = Math.min(lastChange.oldPosition - 1, unifiedManagementState.workingQueue.length);
+        unifiedManagementState.workingQueue.splice(insertIndex, 0, lastChange.player);
+    }
+    
+    reloadListsAfterChange();
+}
+
+function clearAllChanges() {
+    // Restaurar estado original
+    unifiedManagementState.workingQueue = [...unifiedManagementState.originalQueue];
+    unifiedManagementState.workingReserves = [...unifiedManagementState.originalReserves];
+    unifiedManagementState.changes = [];
+    
+    reloadListsAfterChange();
+}
+
+async function applyAllChanges() {
+    if (unifiedManagementState.changes.length === 0) return;
+    
+    try {
+        const btnApply = document.getElementById('btn-apply');
+        if (btnApply) {
+            btnApply.disabled = true;
+            btnApply.textContent = '⏳ Aplicando...';
+        }
+        
+        // Aplicar mudanças no servidor
+        for (const change of unifiedManagementState.changes) {
+            if (change.type === 'add_to_queue') {
+                await adicionarJogadorFila(gameState.sessaoAtiva.id, 
+                    change.player.jogador_id || change.player.id, 
+                    change.newPosition);
+            } else if (change.type === 'remove_from_queue') {
+                await removerJogadorFila(gameState.sessaoAtiva.id, 
+                    change.player.jogador_id || change.player.id);
+            }
+        }
+        
+        // Atualizar estado global
+        await loadGameState();
+        await renderGameInterface();
+        
+        // Fechar painel
+        fecharGerenciamento();
+        
+        alert(`✅ ${unifiedManagementState.changes.length} mudanças aplicadas com sucesso!`);
+        
+    } catch (error) {
+        console.error('Erro ao aplicar mudanças:', error);
+        showError('Erro ao aplicar mudanças. Tente novamente.');
+        
+        const btnApply = document.getElementById('btn-apply');
+        if (btnApply) {
+            btnApply.disabled = false;
+            btnApply.textContent = '✅ Aplicar Mudanças';
+        }
+    }
+}
+
+// =============================================
+// FUNÇÕES DOS BOTÕES DO MODAL UNIFICADO
+// =============================================
+
+// Desfazer última ação
+async function desfazerUltimaAcao() {
+    if (unifiedManagementState.changes.length === 0) {
+        showError('Nenhuma ação para desfazer.');
+        return;
+    }
+
+    const ultimaAcao = unifiedManagementState.changes.pop();
+    
+    try {
+        // Reverter a ação dependendo do tipo
+        switch(ultimaAcao.type) {
+            case 'add_to_queue':
+                // Remover da fila e voltar para reservas
+                unifiedManagementState.filaLocal = unifiedManagementState.filaLocal.filter(
+                    p => (p.jogador_id || p.id) !== (ultimaAcao.player.jogador_id || ultimaAcao.player.id)
+                );
+                unifiedManagementState.reservasLocal.push(ultimaAcao.player);
+                break;
+                
+            case 'remove_from_queue':
+                // Voltar para a fila na posição original
+                unifiedManagementState.filaLocal.splice(ultimaAcao.oldPosition, 0, ultimaAcao.player);
+                unifiedManagementState.reservasLocal = unifiedManagementState.reservasLocal.filter(
+                    p => (p.jogador_id || p.id) !== (ultimaAcao.player.jogador_id || ultimaAcao.player.id)
+                );
+                break;
+                
+            case 'reorder':
+                // Restaurar ordem anterior
+                unifiedManagementState.filaLocal = ultimaAcao.oldOrder;
+                break;
+        }
+
+        // Recarregar listas
+        await reloadListsAfterChange();
+        
+        // Atualizar botão desfazer
+        const btnDesfazer = document.querySelector('.btn-desfazer');
+        if (btnDesfazer) {
+            btnDesfazer.disabled = unifiedManagementState.changes.length === 0;
+        }
+        
+        console.log('✅ Ação desfeita:', ultimaAcao);
+        
+    } catch (error) {
+        console.error('Erro ao desfazer ação:', error);
+        showError('Erro ao desfazer ação.');
+        // Restaurar a ação se houve erro
+        unifiedManagementState.changes.push(ultimaAcao);
+    }
+}
+
+// Limpar toda a fila
+async function limparFila() {
+    if (unifiedManagementState.filaLocal.length === 0) {
+        showError('A fila já está vazia.');
+        return;
+    }
+
+    const confirmacao = confirm(`Tem certeza que deseja limpar toda a fila?\n\n${unifiedManagementState.filaLocal.length} jogadores serão movidos para reservas.`);
+    
+    if (!confirmacao) return;
+
+    try {
+        // Mover todos da fila para reservas
+        const jogadoresDaFila = [...unifiedManagementState.filaLocal];
+        
+        // Registrar mudança para desfazer
+        unifiedManagementState.changes.push({
+            type: 'clear_queue',
+            oldQueue: jogadoresDaFila
+        });
+        
+        // Limpar fila local
+        unifiedManagementState.filaLocal = [];
+        
+        // Adicionar todos às reservas
+        for (const jogador of jogadoresDaFila) {
+            unifiedManagementState.reservasLocal.push(jogador);
+        }
+        
+        // Recarregar listas
+        await reloadListsAfterChange();
+        
+        // Atualizar botão desfazer
+        const btnDesfazer = document.querySelector('.btn-desfazer');
+        if (btnDesfazer) {
+            btnDesfazer.disabled = false;
+        }
+        
+        console.log('✅ Fila limpa:', jogadoresDaFila.length, 'jogadores movidos para reservas');
+        
+    } catch (error) {
+        console.error('Erro ao limpar fila:', error);
+        showError('Erro ao limpar a fila.');
+    }
+}
+
+// Aplicar todas as alterações
+async function aplicarAlteracoes() {
+    if (unifiedManagementState.changes.length === 0) {
+        showError('Nenhuma alteração para aplicar.');
+        return;
+    }
+
+    const btnAplicar = document.querySelector('.btn-aplicar');
+    if (btnAplicar) {
+        btnAplicar.disabled = true;
+        btnAplicar.innerHTML = '⏳ Aplicando...';
+    }
+
+    try {
+        // Aplicar mudanças na ordem correta
+        for (const change of unifiedManagementState.changes) {
+            switch(change.type) {
+                case 'add_to_queue':
+                    await adicionarJogadorNaFila(
+                        change.player.jogador_id || change.player.id,
+                        change.position
+                    );
+                    break;
+                    
+                case 'remove_from_queue':
+                    await removerJogadorDaFila(
+                        change.player.jogador_id || change.player.id
+                    );
+                    break;
+                    
+                case 'reorder':
+                    // Aplicar nova ordem
+                    for (let i = 0; i < change.newOrder.length; i++) {
+                        await atualizarPosicaoFila(
+                            gameState.sessaoAtiva.id,
+                            change.newOrder[i].jogador_id || change.newOrder[i].id,
+                            i + 1
+                        );
+                    }
+                    break;
+                    
+                case 'clear_queue':
+                    // Limpar fila completamente
+                    const filaAtual = await obterFila();
+                    for (const jogador of filaAtual) {
+                        await removerJogadorDaFila(
+                            jogador.jogador_id || jogador.id
+                        );
+                    }
+                    break;
+            }
+        }
+        
+        // Limpar mudanças aplicadas
+        unifiedManagementState.changes = [];
+        
+        // Forçar invalidação de cache para garantir dados atuais
+        forceInvalidateCache();
+        
+        // Atualizar estado global e interface
+        await loadGameState();
+        await renderGameInterface();
+        
+        // Recarregar especificamente a fila principal
+        await carregarFila();
+        await carregarReservas();
+        
+        // Fechar modal
+        fecharGerenciamentoUnificado();
+        
+        showSuccess('✅ Alterações aplicadas com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro ao aplicar alterações:', error);
+        showError('Erro ao aplicar alterações. Tente novamente.');
+    } finally {
+        if (btnAplicar) {
+            btnAplicar.disabled = false;
+            btnAplicar.innerHTML = '✅ Aplicar';
+        }
+    }
+}
+
+// Fechar modal de gerenciamento unificado
+async function fecharGerenciamentoUnificado() {
+    const modal = document.getElementById('gerenciamento-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        
+        // Limpar estado local se não há mudanças pendentes
+        if (unifiedManagementState.changes.length === 0) {
+            unifiedManagementState.reservasLocal = [];
+            unifiedManagementState.filaLocal = [];
+        }
+        
+        // Sempre atualizar a interface principal ao fechar
+        console.log('🔄 Atualizando interface principal após fechar modal...');
+        try {
+            // Forçar invalidação de cache para garantir dados atuais
+            forceInvalidateCache();
+            
+            await loadGameState();
+            await renderGameInterface();
+            console.log('✅ Interface principal atualizada');
+        } catch (error) {
+            console.error('❌ Erro ao atualizar interface:', error);
+        }
+    }
+}
+
+// ========== SISTEMA DE DUPLO-CLIQUE PARA TROCA ========== 
+
+// Função para lidar com duplo-clique nos jogadores
+function handlePlayerDoubleClick(index, type) {
+    console.log('👆👆 Duplo-clique detectado:', { index, type });
+    
+    const selection = unifiedManagementState.doubleClickSelection;
+    
+    // Se já há uma seleção e clicou no mesmo jogador, desselecionar
+    if (selection.isActive && selection.selectedIndex === index && selection.selectedType === type) {
+        clearDoubleClickSelection();
+        return;
+    }
+    
+    // Se não há seleção, selecionar este jogador
+    if (!selection.isActive) {
+        selectPlayerForSwap(index, type);
+        return;
+    }
+    
+    // Se há seleção e clicou em outro jogador, propor troca
+    if (selection.isActive && (selection.selectedIndex !== index || selection.selectedType !== type)) {
+        proposePlayerSwap(selection.selectedIndex, selection.selectedType, index, type);
+        return;
+    }
+}
+
+// Selecionar jogador para troca
+function selectPlayerForSwap(index, type) {
+    const selection = unifiedManagementState.doubleClickSelection;
+    const list = type === 'queue' ? unifiedManagementState.filaLocal : unifiedManagementState.reservasLocal;
+    const player = list[index];
+    
+    selection.selectedPlayer = player;
+    selection.selectedIndex = index;
+    selection.selectedType = type;
+    selection.isActive = true;
+    
+    console.log('✅ Jogador selecionado para troca:', player.nome);
+    
+    // Atualizar interface
+    refreshManagementLists();
+    
+    // Mostrar feedback visual
+    showSwapSelectionFeedback(player.nome, index + 1, type);
+}
+
+// Limpar seleção
+function clearDoubleClickSelection() {
+    const selection = unifiedManagementState.doubleClickSelection;
+    
+    selection.selectedPlayer = null;
+    selection.selectedIndex = null;
+    selection.selectedType = null;
+    selection.isActive = false;
+    
+    console.log('🔄 Seleção de troca limpa');
+    
+    // Atualizar interface
+    refreshManagementLists();
+    hideSwapSelectionFeedback();
+}
+
+// Propor troca entre dois jogadores
+function proposePlayerSwap(index1, type1, index2, type2) {
+    const list1 = type1 === 'queue' ? unifiedManagementState.filaLocal : unifiedManagementState.reservasLocal;
+    const list2 = type2 === 'queue' ? unifiedManagementState.filaLocal : unifiedManagementState.reservasLocal;
+    
+    const player1 = list1[index1];
+    const player2 = list2[index2];
+    
+    const position1 = type1 === 'queue' ? `${index1 + 1}º na fila` : 'reserva';
+    const position2 = type2 === 'queue' ? `${index2 + 1}º na fila` : 'reserva';
+    
+    console.log('🔄 Propondo troca:', { player1: player1.nome, player2: player2.nome });
+    
+    // Mostrar modal de confirmação
+    showSwapConfirmationModal(player1, position1, player2, position2, index1, type1, index2, type2);
+}
+
+// Mostrar modal de confirmação de troca
+function showSwapConfirmationModal(player1, position1, player2, position2, index1, type1, index2, type2) {
+    const modal = document.getElementById('modal-confirmacao') || createConfirmationModal();
+    
+    const message = `Trocar ${player1.nome} (${position1}) ↔ ${player2.nome} (${position2})?`;
+    
+    modal.querySelector('#modal-titulo').textContent = '🔄 Confirmar Troca';
+    modal.querySelector('#modal-mensagem').textContent = message;
+    
+    // Configurar botões
+    const btnConfirmar = modal.querySelector('#modal-confirmar');
+    const btnCancelar = modal.querySelector('#modal-cancelar');
+    
+    // Remover eventos anteriores
+    const newBtnConfirmar = btnConfirmar.cloneNode(true);
+    const newBtnCancelar = btnCancelar.cloneNode(true);
+    btnConfirmar.parentNode.replaceChild(newBtnConfirmar, btnConfirmar);
+    btnCancelar.parentNode.replaceChild(newBtnCancelar, btnCancelar);
+    
+    // Adicionar novos eventos
+    newBtnConfirmar.addEventListener('click', () => {
+        executePlayerSwap(index1, type1, index2, type2);
+        modal.style.display = 'none';
+    });
+    
+    newBtnCancelar.addEventListener('click', () => {
+        modal.style.display = 'none';
+        clearDoubleClickSelection();
+    });
+    
+    modal.style.display = 'block';
+}
+
+// Executar troca de jogadores
+function executePlayerSwap(index1, type1, index2, type2) {
+    console.log('⚡ Executando troca de jogadores...');
+    
+    const list1 = type1 === 'queue' ? unifiedManagementState.filaLocal : unifiedManagementState.reservasLocal;
+    const list2 = type2 === 'queue' ? unifiedManagementState.filaLocal : unifiedManagementState.reservasLocal;
+    
+    // Se são da mesma lista, trocar posições
+    if (type1 === type2) {
+        const temp = list1[index1];
+        list1[index1] = list1[index2];
+        list1[index2] = temp;
+        
+        console.log('✅ Troca executada na mesma lista');
+    } else {
+        // Se são de listas diferentes, mover entre listas
+        const player1 = list1[index1];
+        const player2 = list2[index2];
+        
+        list1[index1] = player2;
+        list2[index2] = player1;
+        
+        console.log('✅ Troca executada entre listas diferentes');
+    }
+    
+    // Registrar mudança
+    unifiedManagementState.changes.push({
+        type: 'swap',
+        details: { index1, type1, index2, type2 },
+        timestamp: Date.now()
+    });
+    
+    // Limpar seleção
+    clearDoubleClickSelection();
+    
+    // Atualizar interface
+    refreshManagementLists();
+    
+    // Feedback para o usuário
+    showTemporaryMessage('✅ Troca realizada com sucesso!');
+}
+
+// Mostrar feedback de seleção
+function showSwapSelectionFeedback(playerName, position, type) {
+    const typeText = type === 'queue' ? 'fila' : 'reserva';
+    showTemporaryMessage(`👆 ${playerName} (${position}º) selecionado. Clique em outro para trocar.`, 3000);
+}
+
+// Esconder feedback de seleção
+function hideSwapSelectionFeedback() {
+    // O feedback temporário já se esconde automaticamente
+}
+
+// Mostrar mensagem temporária
+function showTemporaryMessage(message, duration = 2000) {
+    // Criar ou encontrar elemento de mensagem
+    let messageEl = document.getElementById('temp-message');
+    if (!messageEl) {
+        messageEl = document.createElement('div');
+        messageEl.id = 'temp-message';
+        messageEl.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 9999;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        `;
+        document.body.appendChild(messageEl);
+    }
+    
+    messageEl.textContent = message;
+    messageEl.style.opacity = '1';
+    messageEl.style.transform = 'translateX(-50%) translateY(0)';
+    
+    // Esconder após o tempo especificado
+    setTimeout(() => {
+        messageEl.style.opacity = '0';
+        messageEl.style.transform = 'translateX(-50%) translateY(-20px)';
+    }, duration);
+}
+
+// Criar modal de confirmação se não existir
+function createConfirmationModal() {
+    const modal = document.createElement('div');
+    modal.id = 'modal-confirmacao';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3 id="modal-titulo">Confirmação</h3>
+            <p id="modal-mensagem">Tem certeza?</p>
+            <div class="modal-buttons">
+                <button id="modal-cancelar" class="btn-cancel">❌ Cancelar</button>
+                <button id="modal-confirmar" class="btn-confirm">✅ Confirmar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
 }

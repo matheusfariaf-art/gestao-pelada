@@ -108,12 +108,11 @@ function checkPageAccess(role, isGuest = false) {
             // Visitantes: podem visualizar resultados também
         ],
         'player': [
-            'index.html',
             'fila.html',
             'estatisticas.html',
             'resultados.html',
             'partida.html'
-            // Jogadores cadastrados: podem ver resultados também
+            // Jogadores cadastrados: NÃO podem acessar home, só visualizar dados
         ],
         'organizer': [
             'index.html',
@@ -150,13 +149,20 @@ function checkPageAccess(role, isGuest = false) {
         allowedPages = pageAccess[role] || pageAccess['player'];
     }
     
+    // Verificação especial: jogadores não podem acessar home (index.html)
+    if (!isGuest && role === 'player' && currentPage === 'index.html') {
+        console.log('🔄 Redirecionando jogador da home para resultados...');
+        window.location.href = 'resultados.html';
+        return false;
+    }
+    
     // Se a página atual não está na lista permitida, redirecionar
     if (!allowedPages.includes(currentPage)) {
         const userType = isGuest ? '👀 Visitante' : getRoleDisplayName(role);
         alert(`❌ Você não tem permissão para acessar esta página.\nSeu nível: ${userType}`);
         
-        // Redirecionar visitantes para resultados, outros para index
-        if (isGuest) {
+        // Redirecionar visitantes para resultados, outros conforme perfil
+        if (isGuest || role === 'player') {
             window.location.href = 'resultados.html';
         } else {
             window.location.href = 'index.html';

@@ -11,6 +11,7 @@ body {
     color: #333;
     line-height: 1.6;
     padding-bottom: 120px;
+    overflow-x: hidden; /* Previne scroll horizontal */
 }
 
 /* Container Principal */

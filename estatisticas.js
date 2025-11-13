@@ -14,6 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeStatsPage();
     setupEventListeners();
     setupPlayerSearch();
+    
+    // Configurar botão admin baseado no usuário logado
+    configurarBotaoAdmin();
+    
+    // Configurar botão home baseado no usuário logado
+    configurarBotaoHome();
 });
 
 // Configurar event listeners
@@ -50,6 +56,21 @@ function setupEventListeners() {
             loadStatistics();
         });
     });
+
+    // Botão admin - redirecionar para resultados com modal
+    const btnApagarDia = document.getElementById('btn-apagar-dia');
+    if (btnApagarDia) {
+        btnApagarDia.addEventListener('click', () => {
+            // Só permitir se for admin
+            if (isAdmin()) {
+                // Redirecionar para resultados com parâmetro para abrir modal
+                window.location.href = 'resultados.html?openAdminModal=true';
+            } else {
+                // Mostrar mensagem de acesso negado
+                alert('🔒 Acesso negado!\n\nApenas administradores podem acessar esta função.');
+            }
+        });
+    }
 }
 
 // Inicializar página de estatísticas
@@ -1779,3 +1800,85 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Função para verificar se o usuário atual é admin
+function isAdmin() {
+    try {
+        const userData = localStorage.getItem('pelada3_user');
+        if (!userData) return false;
+        
+        const user = JSON.parse(userData);
+        return user.username === 'admin';
+    } catch (error) {
+        console.error('Erro ao verificar admin:', error);
+        return false;
+    }
+}
+
+// Função para verificar se o usuário atual é jogador (role: player)
+function isPlayer() {
+    try {
+        const userData = localStorage.getItem('pelada3_user');
+        if (!userData) return false;
+        
+        const user = JSON.parse(userData);
+        return user.role === 'player';
+    } catch (error) {
+        console.error('Erro ao verificar jogador:', error);
+        return false;
+    }
+}
+
+// Função para configurar o botão admin baseado no usuário
+function configurarBotaoAdmin() {
+    const btnApagarDia = document.getElementById('btn-apagar-dia');
+    const adminEmoji = document.getElementById('admin-emoji');
+    
+    if (!btnApagarDia || !adminEmoji) return;
+    
+    if (isAdmin()) {
+        // Admin: botão ativo
+        adminEmoji.textContent = '🔒';
+        btnApagarDia.title = 'Apagar dados do dia';
+        btnApagarDia.style.opacity = '1';
+        btnApagarDia.style.cursor = 'pointer';
+        btnApagarDia.style.filter = 'none';
+    } else {
+        // Não admin: botão bloqueado
+        adminEmoji.textContent = '🚫';
+        btnApagarDia.title = 'Acesso restrito - Apenas administradores';
+        btnApagarDia.style.opacity = '0.5';
+        btnApagarDia.style.cursor = 'not-allowed';
+        btnApagarDia.style.filter = 'grayscale(1)';
+    }
+}
+
+// Função para configurar o botão home baseado no usuário
+function configurarBotaoHome() {
+    const homeLink = document.querySelector('a[href="index.html"]');
+    const homeEmoji = homeLink?.querySelector('.emoji');
+    
+    if (!homeLink || !homeEmoji) return;
+    
+    if (isPlayer()) {
+        // Jogador: botão home bloqueado
+        homeEmoji.textContent = '🚫';
+        homeLink.title = 'Acesso restrito - Jogadores não podem acessar home';
+        homeLink.style.opacity = '0.5';
+        homeLink.style.cursor = 'not-allowed';
+        homeLink.style.filter = 'grayscale(1)';
+        
+        // Remover funcionalidade do link
+        homeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('🔒 Acesso negado!\n\nJogadores não podem acessar a tela principal.');
+        });
+    } else {
+        // Admin/Organizador: botão home normal
+        homeEmoji.textContent = '🏠';
+        homeLink.title = 'Tela principal';
+        homeLink.style.opacity = '1';
+        homeLink.style.cursor = 'pointer';
+        homeLink.style.filter = 'none';
+    }
+}

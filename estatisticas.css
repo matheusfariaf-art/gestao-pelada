@@ -312,6 +312,42 @@ body {
 
 /* Responsive para estatísticas individuais */
 /* Responsive - Mobile: manter layout igual ao desktop */
+@media (max-width: 480px) {
+    .individual-stats {
+        padding: 15px;
+        margin: 0 10px;
+    }
+    
+    .stats-category {
+        margin-bottom: 20px;
+    }
+    
+    .category-title {
+        font-size: 1rem;
+        margin-bottom: 12px;
+    }
+    
+    .summary-cards {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+    }
+    
+    .summary-card {
+        padding: 12px;
+    }
+    
+    .card-icon {
+        font-size: 1.2rem;
+    }
+    
+    .card-number {
+        font-size: 1.1rem;
+    }
+    
+    .card-label {
+        font-size: 0.75rem;
+    }
+}
 
 
 

@@ -23,6 +23,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     await carregarDados();
     configurarEventos();
     aplicarFiltro('hoje');
+    
+    // Configurar botão admin baseado no usuário logado
+    configurarBotaoAdmin();
+    
+    // Configurar botão home baseado no usuário logado
+    configurarBotaoHome();
+    
+    // Verificar se deve abrir modal admin automaticamente
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openAdminModal') === 'true') {
+        // Só abrir se for admin
+        if (isAdmin()) {
+            // Aguardar um pouco para garantir que tudo carregou
+            setTimeout(() => {
+                mostrarModalApagarDia();
+            }, 500);
+        }
+        
+        // Limpar o parâmetro da URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+    }
 });
 
 // Configurar eventos
@@ -583,7 +605,15 @@ const btnConfirmarApagar = document.getElementById('confirmar-apagar');
 
 // Event listeners
 if (btnApagarDia) {
-    btnApagarDia.addEventListener('click', mostrarModalApagarDia);
+    btnApagarDia.addEventListener('click', (e) => {
+        // Só permitir se for admin
+        if (isAdmin()) {
+            mostrarModalApagarDia();
+        } else {
+            // Mostrar mensagem de acesso negado
+            alert('🔒 Acesso negado!\n\nApenas administradores podem acessar esta função.');
+        }
+    });
 }
 
 if (btnCancelarApagar) {
@@ -725,10 +755,10 @@ function fecharModalApagarDia() {
 
 // Validar confirmação
 function validarConfirmacao() {
-    const textoDigitado = confirmacaoTexto.value.trim().toUpperCase();
-    const textoCorreto = 'APAGAR';
+    const senhaDigitada = confirmacaoTexto.value.trim();
+    const senhaAdmin = '4231';
     
-    if (textoDigitado === textoCorreto) {
+    if (senhaDigitada === senhaAdmin) {
         btnConfirmarApagar.disabled = false;
         btnConfirmarApagar.style.background = '#dc3545';
     } else {
@@ -746,8 +776,8 @@ async function executarApagarDados() {
         return;
     }
     
-    if (confirmacaoTexto.value.trim().toUpperCase() !== 'APAGAR') {
-        alert('⚠️ Digite "APAGAR" para confirmar!');
+    if (confirmacaoTexto.value.trim() !== '4231') {
+        alert('⚠️ Senha do admin incorreta!');
         return;
     }
     
@@ -828,3 +858,85 @@ async function criarSessaoTeste() {
 
 // Adicionar função global para o botão
 window.criarSessaoTeste = criarSessaoTeste;
+
+// Função para verificar se o usuário atual é admin
+function isAdmin() {
+    try {
+        const userData = localStorage.getItem('pelada3_user');
+        if (!userData) return false;
+        
+        const user = JSON.parse(userData);
+        return user.username === 'admin';
+    } catch (error) {
+        console.error('Erro ao verificar admin:', error);
+        return false;
+    }
+}
+
+// Função para verificar se o usuário atual é jogador (role: player)
+function isPlayer() {
+    try {
+        const userData = localStorage.getItem('pelada3_user');
+        if (!userData) return false;
+        
+        const user = JSON.parse(userData);
+        return user.role === 'player';
+    } catch (error) {
+        console.error('Erro ao verificar jogador:', error);
+        return false;
+    }
+}
+
+// Função para configurar o botão admin baseado no usuário
+function configurarBotaoAdmin() {
+    const btnApagarDia = document.getElementById('btn-apagar-dia');
+    const adminEmoji = document.getElementById('admin-emoji');
+    
+    if (!btnApagarDia || !adminEmoji) return;
+    
+    if (isAdmin()) {
+        // Admin: botão ativo
+        adminEmoji.textContent = '🔒';
+        btnApagarDia.title = 'Apagar dados do dia';
+        btnApagarDia.style.opacity = '1';
+        btnApagarDia.style.cursor = 'pointer';
+        btnApagarDia.style.filter = 'none';
+    } else {
+        // Não admin: botão bloqueado
+        adminEmoji.textContent = '🚫';
+        btnApagarDia.title = 'Acesso restrito - Apenas administradores';
+        btnApagarDia.style.opacity = '0.5';
+        btnApagarDia.style.cursor = 'not-allowed';
+        btnApagarDia.style.filter = 'grayscale(1)';
+    }
+}
+
+// Função para configurar o botão home baseado no usuário
+function configurarBotaoHome() {
+    const homeLink = document.querySelector('a[href="index.html"]');
+    const homeEmoji = homeLink?.querySelector('.emoji');
+    
+    if (!homeLink || !homeEmoji) return;
+    
+    if (isPlayer()) {
+        // Jogador: botão home bloqueado
+        homeEmoji.textContent = '🚫';
+        homeLink.title = 'Acesso restrito - Jogadores não podem acessar home';
+        homeLink.style.opacity = '0.5';
+        homeLink.style.cursor = 'not-allowed';
+        homeLink.style.filter = 'grayscale(1)';
+        
+        // Remover funcionalidade do link
+        homeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('🔒 Acesso negado!\n\nJogadores não podem acessar a tela principal.');
+        });
+    } else {
+        // Admin/Organizador: botão home normal
+        homeEmoji.textContent = '🏠';
+        homeLink.title = 'Tela principal';
+        homeLink.style.opacity = '1';
+        homeLink.style.cursor = 'pointer';
+        homeLink.style.filter = 'none';
+    }
+}

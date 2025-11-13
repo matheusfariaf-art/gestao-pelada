@@ -759,6 +759,90 @@ body {
 }
 
 /* Responsividade */
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+        margin: 0;
+    }
+    
+    .header-card {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .header-card h2 {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+    }
+    
+    .filter-selector {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+    
+    .filter-btn {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .date-select {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+    
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .summary-card {
+        padding: 12px;
+    }
+    
+    .card-icon {
+        font-size: 1.2rem;
+    }
+    
+    .card-number {
+        font-size: 1.1rem;
+    }
+    
+    .card-label {
+        font-size: 0.75rem;
+    }
+    
+    .partida-card {
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .partida-info h3 {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+    }
+    
+    .partida-detalhes {
+        font-size: 0.8rem;
+    }
+    
+    .modal-content {
+        margin: 10px;
+        max-height: calc(100vh - 40px);
+        width: calc(100vw - 20px);
+        max-width: none;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.2rem;
+    }
+    
+    .modal-body {
+        padding: 15px;
+        max-height: calc(100vh - 160px);
+    }
+}
 
 
 

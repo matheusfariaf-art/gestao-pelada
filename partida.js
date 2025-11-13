@@ -11,7 +11,7 @@ let modoSelecaoGol = {
 function configurarBloqueioNavegacao() {
     // Prevenir saída da página quando cronômetro pausado
     window.addEventListener('beforeunload', (e) => {
-        if (estadoPartida.pausado && estadoPartida.iniciado) {
+        if (estadoPartida.pausado && estadoPartida.iniciado && !estadoPartida.cronometroPausadoParaSubstituicao) {
             e.preventDefault();
             e.returnValue = 'O cronômetro está pausado! Retome ou finalize a partida antes de sair.';
             return e.returnValue;
@@ -21,7 +21,13 @@ function configurarBloqueioNavegacao() {
     // Interceptar cliques em links de navegação
     document.addEventListener('click', (e) => {
         const link = e.target.closest('a[href]');
-        if (link && estadoPartida.pausado && estadoPartida.iniciado) {
+        
+        // Dar exceção para o botão de substituição
+        if (link && link.id === 'substitute-footer-btn') {
+            return; // Permitir substituição sempre
+        }
+        
+        if (link && estadoPartida.pausado && estadoPartida.iniciado && !estadoPartida.cronometroPausadoParaSubstituicao) {
             e.preventDefault();
             
             // Mostrar alerta personalizado
@@ -63,6 +69,8 @@ let estadoPartida = {
     limiteVitorias: 3,
     regras: null,
     acabouDeRetomar: false, // Flag para evitar salvamentos logo após retomar
+    substituicoes: [], // Array de substituições realizadas
+    contadorSubstituicoes: 0, // Contador para calcular próxima posição
     // Sistema de cores (padrão: A=preto, B=vermelho)
     coresColetes: {
         timeA: 'black',
@@ -129,6 +137,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         esconderTelaSemanJogo();
         
         mostrarLoading(false);
+        
+        // Mostrar alerta de lembrete das cores dos coletes após carregar a partida
+        setTimeout(() => {
+            mostrarAlertaCoresColetes();
+        }, 1500); // Aguardar 1.5 segundos para garantir que tudo carregou
         
     } catch (error) {
         console.error('Erro ao inicializar partida:', error);
@@ -251,6 +264,19 @@ async function carregarPartida() {
         estadoPartida.placarB = jogo.placar_b || 0;
         estadoPartida.timeA = jogo.time_a;
         estadoPartida.timeB = jogo.time_b;
+        
+        // Debug: verificar estrutura dos times
+        console.log('🔍 Estrutura dos times carregados:', {
+            timeA: estadoPartida.timeA,
+            timeB: estadoPartida.timeB,
+            timeA_type: typeof estadoPartida.timeA,
+            timeB_type: typeof estadoPartida.timeB,
+            timeA_isArray: Array.isArray(estadoPartida.timeA),
+            timeB_isArray: Array.isArray(estadoPartida.timeB),
+            timeA_sample: estadoPartida.timeA && estadoPartida.timeA[0],
+            timeB_sample: estadoPartida.timeB && estadoPartida.timeB[0]
+        });
+        
         estadoPartida.tempoDecorrido = jogo.tempo_decorrido || 0;
         estadoPartida.dataInicio = jogo.data_inicio ? new Date(jogo.data_inicio) : null;
         estadoPartida.historicoAcoes = []; // Não usado mais, manter compatibilidade
@@ -577,6 +603,9 @@ function configurarEventListeners() {
     document.getElementById('btn-cancelar-vitoria').addEventListener('click', function() {
         fecharModaisConfirmacao();
     });
+    
+    // Inicializar visibilidade do botão de substituição
+    atualizarVisibilidadeBotaoSubstituicao();
 }
 
 // Perguntar se deseja iniciar cronômetro
@@ -600,6 +629,9 @@ async function resetCronometro() {
         atualizarStatusCronometro('Cronômetro resetado');
         atualizarBotaoCronometro();
         
+        // Atualizar visibilidade do botão de substituição
+        atualizarVisibilidadeBotaoSubstituicao();
+        
         // Salvar no banco
         await atualizarJogoNoBanco(estadoPartida.jogoId, {
             tempo_decorrido: 0
@@ -619,6 +651,9 @@ async function toggleCronometro() {
             // Iniciar intervalo do cronômetro
             if (intervaloCronometro) clearInterval(intervaloCronometro);
             intervaloCronometro = setInterval(atualizarDisplayCronometro, 1000);
+            
+            // Atualizar visibilidade do botão de substituição
+            atualizarVisibilidadeBotaoSubstituicao();
             
             // Salvar no banco
             await atualizarJogoNoBanco(estadoPartida.jogoId, {
@@ -668,6 +703,9 @@ async function toggleCronometro() {
             estadoPartida.dataInicio = new Date(Date.now() - (tempoDecorridoReal * 1000));
             estadoPartida.pausado = false;
             
+            // Atualizar visibilidade do botão de substituição
+            atualizarVisibilidadeBotaoSubstituicao();
+            
             // Reiniciar intervalo do cronômetro
             if (intervaloCronometro) clearInterval(intervaloCronometro);
             
@@ -699,6 +737,9 @@ async function toggleCronometro() {
             estadoPartida.pausado = true;
             const tempoCalculado = calcularTempoDecorrido();
             estadoPartida.tempoDecorrido = tempoCalculado;
+            
+            // Atualizar visibilidade do botão de substituição
+            atualizarVisibilidadeBotaoSubstituicao();
             
             // Mostrar aviso de navegação bloqueada
             mostrarAvisoNavegacaoBloqueada();
@@ -755,6 +796,13 @@ async function toggleCronometro() {
     }
 }
 
+// Função para formatar tempo em segundos para MM:SS
+function formatarTempo(tempoSegundos) {
+    const minutos = Math.floor(tempoSegundos / 60);
+    const segundos = tempoSegundos % 60;
+    return `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+}
+
 // Calcular tempo decorrido
 function calcularTempoDecorrido() {
     if (!estadoPartida.iniciado || !estadoPartida.dataInicio) {
@@ -780,7 +828,14 @@ function calcularTempoDecorrido() {
 async function atualizarDisplayCronometro() {
     let tempoRestanteAtual;
     
+    console.log('🔍 atualizarDisplayCronometro:', {
+        iniciado: estadoPartida.iniciado,
+        pausado: estadoPartida.pausado,
+        cronometroPausadoParaSubstituicao: estadoPartida.cronometroPausadoParaSubstituicao
+    });
+    
     if (estadoPartida.iniciado && !estadoPartida.pausado && estadoPartida.dataInicio) {
+        console.log('⏱️ Cronômetro RODANDO - calculando tempo real');
         // Calcular tempo baseado no timestamp real
         const agora = new Date();
         const tempoDecorridoReal = Math.floor((agora - estadoPartida.dataInicio) / 1000);
@@ -810,6 +865,7 @@ async function atualizarDisplayCronometro() {
             console.log('🚫 Salvamento bloqueado - acabou de retomar:', tempoDecorridoReal);
         }
     } else {
+        console.log('⏸️ Cronômetro PAUSADO/NÃO INICIADO - usando tempo armazenado');
         // Usar valor armazenado quando pausado ou não iniciado
         tempoRestanteAtual = estadoPartida.tempoRestante;
     }
@@ -863,7 +919,7 @@ function atualizarBotoes() {
 }
 
 // Mostrar modal personalizado de fim de tempo
-function mostrarModalFimTempo() {
+async function mostrarModalFimTempo() {
     // Obter nomes das cores dos coletes
     const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
     const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
@@ -875,8 +931,69 @@ function mostrarModalFimTempo() {
     document.getElementById('placar-final-b').textContent = estadoPartida.placarB;
     
     // Atualizar botões de prioridade com cores corretas
-    document.getElementById('nome-time-preto').textContent = estadoPartida.coresColetes.timeA === 'preto' ? nomeCorTimeA : nomeCorTimeB;
-    document.getElementById('nome-time-vermelho').textContent = estadoPartida.coresColetes.timeA === 'vermelho' ? nomeCorTimeA : nomeCorTimeB;
+    document.getElementById('nome-time-preto').textContent = estadoPartida.coresColetes.timeA === 'black' ? nomeCorTimeA : nomeCorTimeB;
+    document.getElementById('nome-time-vermelho').textContent = estadoPartida.coresColetes.timeA === 'red' ? nomeCorTimeA : nomeCorTimeB;
+    
+    // Função auxiliar para extrair nome do jogador dos elementos já renderizados
+    function obterNomeJogadorDaTela(jogadorId) {
+        if (!jogadorId) return null;
+        
+        // Buscar nos elementos já renderizados na tela
+        const elementoJogador = document.querySelector(`[data-jogador-id="${jogadorId}"]`);
+        
+        if (elementoJogador) {
+            const nome = elementoJogador.getAttribute('data-nome');
+            return nome;
+        }
+        
+        // Fallback
+        return `Jogador ${jogadorId.substring(0, 8)}`;
+    }
+        
+    let primeiroJogadorPreto = 'Sem jogador';
+    let primeiroJogadorVermelho = 'Sem jogador';
+    
+    console.log('🔍 DEBUG TEMPO - Estado dos times:', {
+        timeA: estadoPartida.timeA,
+        timeB: estadoPartida.timeB,
+        coresColetes: estadoPartida.coresColetes
+    });
+    
+    // Verificar qual time tem qual cor e buscar primeiro jogador
+    if (estadoPartida.coresColetes.timeA === 'black') {
+        if (estadoPartida.timeA && estadoPartida.timeA.length > 0) {
+            const jogador = estadoPartida.timeA[0];
+            const nomeJogador = obterNomeJogadorHTML(jogador);
+            primeiroJogadorPreto = nomeJogador || 'Jogador Time Preto';
+            console.log('👤 Primeiro jogador PRETO (Time A):', jogador, '→', nomeJogador);
+        }
+    } else if (estadoPartida.timeB && estadoPartida.timeB.length > 0) {
+        const jogador = estadoPartida.timeB[0];
+        const nomeJogador = obterNomeJogadorHTML(jogador);
+        primeiroJogadorPreto = nomeJogador || 'Jogador Time Preto';
+        console.log('👤 Primeiro jogador PRETO (Time B):', jogador, '→', nomeJogador);
+    }
+    
+    if (estadoPartida.coresColetes.timeB === 'red') {
+        if (estadoPartida.timeB && estadoPartida.timeB.length > 0) {
+            const jogador = estadoPartida.timeB[0];
+            const nomeJogador = obterNomeJogadorHTML(jogador);
+            primeiroJogadorVermelho = nomeJogador || 'Jogador Time Vermelho';
+            console.log('👤 Primeiro jogador VERMELHO (Time B):', jogador, '→', nomeJogador);
+        }
+    } else if (estadoPartida.timeA && estadoPartida.timeA.length > 0) {
+        const jogador = estadoPartida.timeA[0];
+        const nomeJogador = obterNomeJogadorHTML(jogador);
+        primeiroJogadorVermelho = nomeJogador || 'Jogador Time Vermelho';
+        console.log('👤 Primeiro jogador VERMELHO (Time A):', jogador, '→', nomeJogador);
+    }
+    
+    // Definir texto nos elementos do modal de fim de tempo
+    const elementoTempoPreto = document.getElementById('primeiro-jogador-tempo-preto');
+    const elementoTempoVermelho = document.getElementById('primeiro-jogador-tempo-vermelho');
+    
+    if (elementoTempoPreto) elementoTempoPreto.textContent = primeiroJogadorPreto;
+    if (elementoTempoVermelho) elementoTempoVermelho.textContent = primeiroJogadorVermelho;
     
     // Determinar resultado da partida
     let resultadoTexto = '';
@@ -937,9 +1054,9 @@ function selecionarTimePrioridade(corSelecionada) {
     // Converter cor para time A ou B baseado nas cores dos coletes
     let timePrioridade;
     if (corSelecionada === 'preto') {
-        timePrioridade = estadoPartida.coresColetes.timeA === 'preto' ? 'A' : 'B';
+        timePrioridade = estadoPartida.coresColetes.timeA === 'black' ? 'A' : 'B';
     } else {
-        timePrioridade = estadoPartida.coresColetes.timeA === 'vermelho' ? 'A' : 'B';
+        timePrioridade = estadoPartida.coresColetes.timeA === 'red' ? 'A' : 'B';
     }
     
     // Salvar a escolha para usar na finalização (usar a variável que o sistema espera)
@@ -948,7 +1065,7 @@ function selecionarTimePrioridade(corSelecionada) {
 }
 
 // Modal para confirmar empate manual
-function mostrarModalConfirmarEmpate() {
+async function mostrarModalConfirmarEmpate() {
     const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
     const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
     
@@ -959,8 +1076,71 @@ function mostrarModalConfirmarEmpate() {
     document.getElementById('placar-empate-b').textContent = estadoPartida.placarB;
     
     // Atualizar botões com cores corretas
-    document.getElementById('nome-empate-preto').textContent = estadoPartida.coresColetes.timeA === 'preto' ? nomeCorTimeA : nomeCorTimeB;
-    document.getElementById('nome-empate-vermelho').textContent = estadoPartida.coresColetes.timeA === 'vermelho' ? nomeCorTimeA : nomeCorTimeB;
+    document.getElementById('nome-empate-preto').textContent = estadoPartida.coresColetes.timeA === 'black' ? nomeCorTimeA : nomeCorTimeB;
+    document.getElementById('nome-empate-vermelho').textContent = estadoPartida.coresColetes.timeB === 'red' ? nomeCorTimeB : nomeCorTimeA;
+    
+
+    
+    // Adicionar primeiros jogadores de cada time
+    let primeiroJogadorPreto = 'Sem jogador';
+    let primeiroJogadorVermelho = 'Sem jogador';
+    
+    console.log('🔍 DEBUG EMPATE - Estado dos times:', {
+        timeA: estadoPartida.timeA,
+        timeB: estadoPartida.timeB,
+        coresColetes: estadoPartida.coresColetes
+    });
+    
+    // Verificar qual time tem qual cor e buscar primeiro jogador
+    if (estadoPartida.coresColetes.timeA === 'black') {
+        if (estadoPartida.timeA && estadoPartida.timeA.length > 0) {
+            const jogador = estadoPartida.timeA[0];
+            const nomeJogador = obterNomeJogadorHTML(jogador);
+            primeiroJogadorPreto = nomeJogador || 'Jogador Time Preto';
+            console.log('👤 Primeiro jogador PRETO (Time A):', jogador, '→', nomeJogador);
+        }
+    } else if (estadoPartida.timeB && estadoPartida.timeB.length > 0) {
+        const jogador = estadoPartida.timeB[0];
+        const nomeJogador = obterNomeJogadorHTML(jogador);
+        primeiroJogadorPreto = nomeJogador || 'Jogador Time Preto';
+        console.log('👤 Primeiro jogador PRETO (Time B):', jogador, '→', nomeJogador);
+    }
+    
+    if (estadoPartida.coresColetes.timeB === 'red') {
+        if (estadoPartida.timeB && estadoPartida.timeB.length > 0) {
+            const jogador = estadoPartida.timeB[0];
+            const nomeJogador = obterNomeJogadorHTML(jogador);
+            primeiroJogadorVermelho = nomeJogador || 'Jogador Time Vermelho';
+            console.log('👤 Primeiro jogador VERMELHO (Time B):', jogador, '→', nomeJogador);
+        }
+    } else if (estadoPartida.timeA && estadoPartida.timeA.length > 0) {
+        const jogador = estadoPartida.timeA[0];
+        const nomeJogador = obterNomeJogadorHTML(jogador);
+        primeiroJogadorVermelho = nomeJogador || 'Jogador Time Vermelho';
+        console.log('👤 Primeiro jogador VERMELHO (Time A):', jogador, '→', nomeJogador);
+    }
+    
+    // Definir texto nos elementos
+    const elementoPreto = document.getElementById('primeiro-jogador-preto');
+    const elementoVermelho = document.getElementById('primeiro-jogador-vermelho');
+    
+    console.log('🔍 DEBUG EMPATE - Elementos encontrados:', {
+        elementoPreto: !!elementoPreto,
+        elementoVermelho: !!elementoVermelho,
+        primeiroJogadorPreto,
+        primeiroJogadorVermelho
+    });
+    
+    if (elementoPreto) {
+        elementoPreto.textContent = primeiroJogadorPreto;
+        console.log('✅ Nome PRETO definido no elemento:', primeiroJogadorPreto);
+    }
+    if (elementoVermelho) {
+        elementoVermelho.textContent = primeiroJogadorVermelho;
+        console.log('✅ Nome VERMELHO definido no elemento:', primeiroJogadorVermelho);
+    }
+    
+    console.log('Jogadores:', {primeiroJogadorPreto, primeiroJogadorVermelho});
     
     // Limpar seleções anteriores
     document.querySelectorAll('#modal-confirmar-empate .btn-time').forEach(btn => {
@@ -970,6 +1150,23 @@ function mostrarModalConfirmarEmpate() {
     // Mostrar modal
     document.getElementById('modal-confirmar-empate').style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    
+    // Garantir que os nomes sejam definidos após o modal estar visível
+    setTimeout(() => {
+        const elementoPreto = document.getElementById('primeiro-jogador-preto');
+        const elementoVermelho = document.getElementById('primeiro-jogador-vermelho');
+        
+        console.log('🔄 FORÇANDO atualização dos nomes após modal visível');
+        
+        if (elementoPreto) {
+            elementoPreto.textContent = primeiroJogadorPreto;
+            console.log('🔄 PRETO forçado:', primeiroJogadorPreto);
+        }
+        if (elementoVermelho) {
+            elementoVermelho.textContent = primeiroJogadorVermelho;
+            console.log('🔄 VERMELHO forçado:', primeiroJogadorVermelho);
+        }
+    }, 100);
 }
 
 // Modal para confirmar vitória
@@ -1063,6 +1260,9 @@ function atualizarBotaoCronometro() {
         emoji.textContent = '⏸️';
         atualizarStatusCronometro('Em andamento');
     }
+    
+    // Atualizar visibilidade do botão de substituição
+    atualizarVisibilidadeBotaoSubstituicao();
 }
 
 // Marcar gol
@@ -1429,34 +1629,195 @@ async function marcarGolContra(timeBeneficiado) {
 
 // Mostrar opções do VAR
 async function mostrarVAR() {
+    console.log('📺 Abrindo VAR...');
+    
     // Buscar último gol da partida
     const resultadoGols = await Database.buscarGolsPorJogo(estadoPartida.jogoId);
+    const temGols = resultadoGols.success && resultadoGols.data && resultadoGols.data.length > 0;
     
-    if (!resultadoGols.success || !resultadoGols.data || resultadoGols.data.length === 0) {
-        alert('⚠️ Não há gols para desfazer.');
+    // Verificar se há substituições
+    const temSubstituicoes = estadoPartida.substituicoes && estadoPartida.substituicoes.length > 0;
+    
+    console.log('📺 Estado VAR:', {
+        temGols: temGols,
+        totalGols: temGols ? resultadoGols.data.length : 0,
+        temSubstituicoes: temSubstituicoes,
+        totalSubstituicoes: temSubstituicoes ? estadoPartida.substituicoes.length : 0
+    });
+    
+    if (!temGols && !temSubstituicoes) {
+        alert('⚠️ Não há ações para desfazer (gols ou substituições).');
         return;
     }
     
-    const ultimoGol = resultadoGols.data[resultadoGols.data.length - 1];
+    // Criar modal com opções
+    let opcoes = '';
     
-    // Verificar se é gol contra ou gol normal
-    let mensagem;
-    if (ultimoGol.gol_contra) {
-        // É um gol contra
-        const timeBeneficiado = ultimoGol.time === 'A' ? 'Time A' : 'Time B';
-        const timeQueFez = ultimoGol.time_gol_contra === 'A' ? 'Time A' : 'Time B';
-        mensagem = `Desfazer último gol contra?\n\n${timeQueFez} fez gol contra a favor do ${timeBeneficiado}.`;
-    } else {
-        // É um gol normal
-        const nomeJogador = ultimoGol.jogadores ? ultimoGol.jogadores.nome : 'Jogador';
-        mensagem = `Desfazer último gol de ${nomeJogador}?`;
+    if (temGols) {
+        const ultimoGol = resultadoGols.data[resultadoGols.data.length - 1];
+        let descricaoGol;
+        
+        if (ultimoGol.gol_contra) {
+            const timeBeneficiado = ultimoGol.time === 'A' ? 'Time A' : 'Time B';
+            const timeQueFez = ultimoGol.time_gol_contra === 'A' ? 'Time A' : 'Time B';
+            descricaoGol = `Gol contra: ${timeQueFez} → ${timeBeneficiado}`;
+        } else {
+            const nomeJogador = ultimoGol.jogadores ? ultimoGol.jogadores.nome : 'Jogador';
+            descricaoGol = `Gol de ${nomeJogador}`;
+        }
+        
+        opcoes += `
+            <div class="var-option" onclick="desfazerUltimoGol(${JSON.stringify(ultimoGol).replace(/"/g, '&quot;')})">
+                🥅 Desfazer último gol<br>
+                <small>${descricaoGol}</small>
+            </div>
+        `;
     }
     
-    mostrarModal(
-        '📺 VAR',
-        mensagem,
-        () => desfazerUltimoGol(ultimoGol)
-    );
+    if (temSubstituicoes) {
+        const ultimaSubstituicao = estadoPartida.substituicoes[estadoPartida.substituicoes.length - 1];
+        opcoes += `
+            <div class="var-option" onclick="desfazerUltimaSubstituicao()">
+                🔄 Desfazer última substituição<br>
+                <small>${ultimaSubstituicao.jogador_entrou.nome} → ${ultimaSubstituicao.jogador_saiu.nome}</small>
+            </div>
+        `;
+    }
+    
+    // Mostrar modal customizado
+    mostrarModalVAR(opcoes);
+}
+
+// Modal customizado para VAR
+function mostrarModalVAR(opcoes) {
+    const modalContent = `
+        <div style="text-align: center; padding: 20px;">
+            <h3 style="color: #333; margin-bottom: 20px;">📺 VAR - Video Assistant Referee</h3>
+            <p style="margin-bottom: 20px; color: #666;">Selecione a ação para desfazer:</p>
+            <div class="var-options">
+                ${opcoes}
+            </div>
+            <button onclick="fecharModalVAR()" style="margin-top: 15px; padding: 8px 16px; background: #ccc; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
+        </div>
+    `;
+    
+    // Criar modal dinamicamente
+    const modal = document.createElement('div');
+    modal.id = 'modal-var-custom';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+        background: rgba(0,0,0,0.7); display: flex; align-items: center; 
+        justify-content: center; z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 8px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            ${modalContent}
+            <style>
+                .var-options {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    margin: 15px 0;
+                }
+                .var-option {
+                    padding: 15px;
+                    border: 2px solid #ddd;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    text-align: center;
+                }
+                .var-option:hover {
+                    border-color: #3498db;
+                    background: #f8f9fa;
+                    transform: translateY(-2px);
+                }
+                .var-option small {
+                    color: #666;
+                    display: block;
+                    margin-top: 5px;
+                }
+            </style>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function fecharModalVAR() {
+    const modal = document.getElementById('modal-var-custom');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Desfazer última substituição
+async function desfazerUltimaSubstituicao() {
+    try {
+        if (!estadoPartida.substituicoes || estadoPartida.substituicoes.length === 0) {
+            alert('❌ Não há substituições para desfazer.');
+            return;
+        }
+        
+        const ultimaSubstituicao = estadoPartida.substituicoes[estadoPartida.substituicoes.length - 1];
+        
+        console.log('🔄 Desfazendo substituição:', ultimaSubstituicao);
+        
+        // Confirmar ação
+        const confirmar = confirm(
+            `Desfazer substituição?\n\n` +
+            `${ultimaSubstituicao.jogador_entrou.nome} voltará para a fila\n` +
+            `${ultimaSubstituicao.jogador_saiu.nome} retornará ao time`
+        );
+        
+        if (!confirmar) return;
+        
+        // 1. Reverter no estado dos times
+        const jogadorQueEntrou = ultimaSubstituicao.jogador_entrou;
+        const jogadorQueSaiu = ultimaSubstituicao.jogador_saiu;
+        
+        // Encontrar e reverter no time correto
+        if (jogadorQueSaiu.time === 'A') {
+            const index = estadoPartida.timeA.findIndex(id => {
+                const jogadorId = typeof id === 'object' ? id.id : id;
+                return jogadorId === jogadorQueEntrou.id;
+            });
+            if (index !== -1) {
+                estadoPartida.timeA[index] = jogadorQueSaiu.id;
+            }
+        } else {
+            const index = estadoPartida.timeB.findIndex(id => {
+                const jogadorId = typeof id === 'object' ? id.id : id;
+                return jogadorId === jogadorQueEntrou.id;
+            });
+            if (index !== -1) {
+                estadoPartida.timeB[index] = jogadorQueSaiu.id;
+            }
+        }
+        
+        // 2. Atualizar contador
+        estadoPartida.contadorSubstituicoes--;
+        
+        // 3. Remover da lista de substituições
+        estadoPartida.substituicoes.pop();
+        
+        // 4. Atualizar interface
+        await renderizarTime('A', estadoPartida.timeA, 'team-a-players');
+        await renderizarTime('B', estadoPartida.timeB, 'team-b-players');
+        atualizarBotoes();
+        
+        // 5. Fechar modal VAR
+        fecharModalVAR();
+        
+        alert(`✅ Substituição desfeita!\n${jogadorQueSaiu.nome} está de volta ao time.`);
+        
+        console.log('✅ Substituição desfeita com sucesso');
+        
+    } catch (error) {
+        console.error('❌ Erro ao desfazer substituição:', error);
+        alert('❌ Erro ao desfazer substituição. Tente novamente.');
+    }
 }
 
 // Desfazer último gol (VAR)
@@ -1512,6 +1873,7 @@ async function desfazerUltimoGol(gol) {
         alert(`✅ ${tipoGol.charAt(0).toUpperCase() + tipoGol.slice(1)} desfeito com sucesso!`);
         
         fecharModal();
+        fecharModalVAR(); // Fechar modal VAR também
         
     } catch (error) {
         console.error('Erro ao desfazer ação:', error);
@@ -1602,8 +1964,8 @@ function mostrarModalDesempate() {
     const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
     
     // Obter emojis das cores
-    const emojiTimeA = estadoPartida.coresColetes.timeA === 'preto' ? '⚫' : '🔴';
-    const emojiTimeB = estadoPartida.coresColetes.timeB === 'preto' ? '⚫' : '🔴';
+    const emojiTimeA = estadoPartida.coresColetes.timeA === 'black' ? '⚫' : '🔴';
+    const emojiTimeB = estadoPartida.coresColetes.timeB === 'black' ? '⚫' : '🔴';
     
     const modalContent = `
         <div style="text-align: center;">
@@ -2086,4 +2448,1161 @@ function aplicarRestricoesVisuaisPartida() {
             
         }, 1500); // Aguardar mais tempo para garantir que a partida foi carregada
     }
+}
+
+// ========== SISTEMA DE SUBSTITUIÇÕES ==========
+
+// Abrir modal de substituição
+async function abrirSubstituicao() {
+    console.log('=======================================');
+    console.log('🔄 INICIANDO ABERTURA DE SUBSTITUIÇÃO 🔄');
+    console.log('=======================================');
+    console.log('🔄 Abrindo modal de substituição...');
+    console.log('📊 Estado ANTES da pausa:', {
+        iniciado: estadoPartida.iniciado,
+        pausado: estadoPartida.pausado,
+        tempoDecorrido: estadoPartida.tempoDecorrido,
+        tempoRestante: estadoPartida.tempoRestante
+    });
+    
+    // Pausar cronômetro automaticamente
+    let cronometroPausadoParaSubstituicao = false;
+    if (estadoPartida.iniciado && !estadoPartida.pausado) {
+        console.log('⏸️ Pausando cronômetro para substituição...');
+        
+        // Calcular tempo atual antes de pausar
+        const agora = new Date();
+        const tempoDecorridoAtual = Math.floor((agora - estadoPartida.dataInicio) / 1000);
+        const duracaoTotalSegundos = estadoPartida.duracaoTotal * 60;
+        const tempoRestanteAtual = Math.max(0, duracaoTotalSegundos - tempoDecorridoAtual);
+        
+        // Atualizar estado antes de pausar
+        estadoPartida.tempoDecorrido = tempoDecorridoAtual;
+        estadoPartida.tempoRestante = tempoRestanteAtual;
+        
+        console.log('📊 Calculando tempo na pausa:', {
+            agora: agora,
+            dataInicio: estadoPartida.dataInicio,
+            tempoDecorridoAtual: tempoDecorridoAtual,
+            tempoRestanteAtual: tempoRestanteAtual
+        });
+        
+        // Pausar efetivamente
+        estadoPartida.pausado = true;
+        cronometroPausadoParaSubstituicao = true;
+        console.log('⏸️ Cronômetro pausado para substituição');
+        
+        // Atualizar display imediatamente
+        atualizarDisplayCronometro();
+        
+        // Adicionar indicador visual de pausa
+        adicionarIndicadorPausa('Substituição em andamento...');
+        
+        // Salvar estado pausado no banco
+        const dadosParaSalvar = { 
+            status: 'pausado',
+            tempo_decorrido: tempoDecorridoAtual
+        };
+        console.log('💾 Salvando estado pausado:', dadosParaSalvar);
+        await atualizarJogoNoBanco(estadoPartida.jogoId, dadosParaSalvar);
+    } else {
+        console.log('❌ NÃO pausou cronômetro:', {
+            motivo: estadoPartida.iniciado ? 'Já estava pausado' : 'Jogo não iniciado'
+        });
+    }
+    
+    // Guardar se pausamos o cronômetro para esta substituição
+    estadoPartida.cronometroPausadoParaSubstituicao = cronometroPausadoParaSubstituicao;
+    console.log('🔧 Flag de pausa para substituição:', cronometroPausadoParaSubstituicao);
+    
+    console.log('📊 Estado atual:', {
+        iniciado: estadoPartida.iniciado,
+        pausado: estadoPartida.pausado,
+        timeA: estadoPartida.timeA,
+        timeB: estadoPartida.timeB,
+        contadorSubstituicoes: estadoPartida.contadorSubstituicoes
+    });
+    
+    // Verificar se há fila suficiente
+    console.log('🔍 DEBUG - Iniciando verificação da fila...');
+    const filaAtual = await obterFilaCompleta();
+    console.log('📋 Fila atual:', filaAtual);
+    console.log('📊 Tamanho da fila:', filaAtual ? filaAtual.length : 'null/undefined');
+    
+    const posicaoProxima = 13 + estadoPartida.contadorSubstituicoes;
+    console.log(`📍 Posição próximo substituto: ${posicaoProxima}`);
+    console.log(`🔢 Contador de substituições atual: ${estadoPartida.contadorSubstituicoes}`);
+    
+    if (!filaAtual || filaAtual.length < posicaoProxima) {
+        console.log('❌ Fila insuficiente para substituição');
+        console.log('🔍 Detalhes da verificação:', {
+            filaExiste: !!filaAtual,
+            tamanhoFila: filaAtual ? filaAtual.length : 'null',
+            posicaoNecessaria: posicaoProxima
+        });
+        alert('❌ Não há jogadores suficientes na fila para substituição!');
+        return;
+    }
+    
+    // Preencher listas com jogadores atuais dos times
+    console.log('🔄 Preenchendo listas de jogadores...');
+    await preencherListasJogadores();
+    
+    // Mostrar modal
+    console.log('✅ Exibindo modal de substituição');
+    document.getElementById('modal-substituicao').style.display = 'block';
+}
+
+// Buscar dados completos de um jogador por ID
+async function buscarJogadorPorId(jogadorId) {
+    try {
+        console.log(`🔍 Buscando jogador ID: ${jogadorId}`);
+        
+        // Primeiro tentar buscar nos elementos HTML já renderizados
+        const nomeHTML = obterNomeJogadorHTML(jogadorId);
+        if (nomeHTML) {
+            console.log(`✅ Nome encontrado nos elementos HTML: ${nomeHTML}`);
+            return {
+                id: jogadorId,
+                nome: nomeHTML,
+                nome_usuario: nomeHTML
+            };
+        }
+        
+        // Se não encontrou no HTML, buscar no banco
+        const supabaseClient = initializeSupabase();
+        console.log(`📡 Cliente Supabase inicializado:`, !!supabaseClient);
+        
+        if (!supabaseClient) {
+            console.error('❌ Cliente Supabase não disponível');
+            return null;
+        }
+        
+        console.log(`🎯 Tentando buscar na tabela usuarios...`);
+        const { data: jogador, error } = await supabaseClient
+            .from('usuarios')
+            .select('*')
+            .eq('id', jogadorId)
+            .single();
+        
+        console.log(`📋 Resultado da busca usuarios:`, { data: jogador, error });
+        
+        if (error) {
+            console.error(`❌ Erro ao buscar jogador ${jogadorId} na tabela usuarios:`, error);
+            
+            // Tentar buscar na tabela jogadores como alternativa
+            console.log(`🔄 Tentando buscar na tabela jogadores...`);
+            const { data: jogadorAlt, error: errorAlt } = await supabaseClient
+                .from('jogadores')
+                .select('*')
+                .eq('id', jogadorId)
+                .single();
+            
+            console.log(`📋 Resultado da busca jogadores:`, { data: jogadorAlt, error: errorAlt });
+            
+            if (errorAlt) {
+                console.error(`❌ Erro na busca alternativa:`, errorAlt);
+                return null;
+            }
+            
+            console.log(`✅ Jogador encontrado na tabela jogadores:`, jogadorAlt);
+            return jogadorAlt;
+        }
+        
+        console.log(`✅ Jogador encontrado na tabela usuarios:`, jogador);
+        return jogador;
+    } catch (error) {
+        console.error(`❌ Erro inesperado ao buscar jogador:`, error);
+        return null;
+    }
+}
+
+// Preencher listas de jogadores por time
+async function preencherListasJogadores() {
+    console.log('🔄 Iniciando preenchimento das listas...');
+    
+    const teamAContainer = document.getElementById('substituicao-team-a-players');
+    const teamBContainer = document.getElementById('substituicao-team-b-players');
+    
+    console.log('📋 Containers encontrados:', {
+        teamAContainer: !!teamAContainer,
+        teamBContainer: !!teamBContainer
+    });
+    
+    if (!teamAContainer || !teamBContainer) {
+        console.error('❌ Containers não encontrados!');
+        return;
+    }
+    
+    // Mostrar indicador de carregamento
+    teamAContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Carregando...</div>';
+    teamBContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Carregando...</div>';
+    
+    console.log('👥 IDs dos times a serem renderizados:', {
+        timeA: estadoPartida.timeA,
+        timeB: estadoPartida.timeB
+    });
+    
+    try {
+        // Limpar containers
+        teamAContainer.innerHTML = '';
+        teamBContainer.innerHTML = '';
+        
+        // Buscar dados completos dos jogadores do Time A
+        if (estadoPartida.timeA && estadoPartida.timeA.length > 0) {
+            console.log('🔍 Buscando dados do Time A...');
+            for (let i = 0; i < estadoPartida.timeA.length; i++) {
+                const jogadorId = estadoPartida.timeA[i];
+                
+                try {
+                    const jogadorCompleto = await buscarJogadorPorId(jogadorId);
+                    console.log(`➕ Jogador Time A [${i}]:`, { id: jogadorId, dados: jogadorCompleto });
+                    
+                    if (jogadorCompleto) {
+                        const playerDiv = createPlayerOption(jogadorCompleto, 'A');
+                        teamAContainer.appendChild(playerDiv);
+                    } else {
+                        console.warn(`❌ Jogador ${jogadorId} não encontrado, criando fallback`);
+                        // Temporário: criar fallback com nome mais amigável
+                        const playerDiv = createPlayerOption({
+                            id: jogadorId,
+                            nome: `Jogador ${i + 1}`,
+                            nome_usuario: null
+                        }, 'A');
+                        teamAContainer.appendChild(playerDiv);
+                    }
+                } catch (error) {
+                    console.error(`⚠️ Erro ao buscar jogador ${jogadorId}:`, error);
+                    // Criar fallback em caso de erro
+                    const playerDiv = createPlayerOption({
+                        id: jogadorId,
+                        nome: `Jogador ${i + 1}`,
+                        nome_usuario: null
+                    }, 'A');
+                    teamAContainer.appendChild(playerDiv);
+                }
+            }
+        } else {
+            console.warn('⚠️ Time A vazio ou indefinido');
+            teamAContainer.innerHTML = '<div style="text-align: center; color: #999;">Nenhum jogador</div>';
+        }
+        
+        // Buscar dados completos dos jogadores do Time B
+        if (estadoPartida.timeB && estadoPartida.timeB.length > 0) {
+            console.log('🔍 Buscando dados do Time B...');
+            for (let i = 0; i < estadoPartida.timeB.length; i++) {
+                const jogadorId = estadoPartida.timeB[i];
+                
+                try {
+                    const jogadorCompleto = await buscarJogadorPorId(jogadorId);
+                    console.log(`➕ Jogador Time B [${i}]:`, { id: jogadorId, dados: jogadorCompleto });
+                    
+                    if (jogadorCompleto) {
+                        const playerDiv = createPlayerOption(jogadorCompleto, 'B');
+                        teamBContainer.appendChild(playerDiv);
+                    } else {
+                        console.warn(`❌ Jogador ${jogadorId} não encontrado, criando fallback`);
+                        // Temporário: criar fallback com nome mais amigável
+                        const playerDiv = createPlayerOption({
+                            id: jogadorId,
+                            nome: `Jogador ${i + 1}`,
+                            nome_usuario: null
+                        }, 'B');
+                        teamBContainer.appendChild(playerDiv);
+                    }
+                } catch (error) {
+                    console.error(`⚠️ Erro ao buscar jogador ${jogadorId}:`, error);
+                    // Criar fallback em caso de erro
+                    const playerDiv = createPlayerOption({
+                        id: jogadorId,
+                        nome: `Jogador ${i + 1}`,
+                        nome_usuario: null
+                    }, 'B');
+                    teamBContainer.appendChild(playerDiv);
+                }
+            }
+        } else {
+            console.warn('⚠️ Time B vazio ou indefinido');
+            teamBContainer.innerHTML = '<div style="text-align: center; color: #999;">Nenhum jogador</div>';
+        }
+        
+        console.log('✅ Preenchimento concluído');
+    } catch (error) {
+        console.error('❌ Erro geral ao preencher listas:', error);
+        teamAContainer.innerHTML = '<div style="text-align: center; color: red;">Erro ao carregar</div>';
+        teamBContainer.innerHTML = '<div style="text-align: center; color: red;">Erro ao carregar</div>';
+    }
+}
+
+// Criar elemento clicável para jogador
+function createPlayerOption(jogador, time) {
+    console.log('🎯 Criando opção para jogador:', { jogador, time });
+    
+    const div = document.createElement('div');
+    div.className = 'player-option';
+    
+    // Tentar extrair o nome de diferentes formas possíveis
+    let nomeJogador;
+    
+    if (typeof jogador === 'string') {
+        nomeJogador = jogador;
+    } else if (jogador && typeof jogador === 'object') {
+        nomeJogador = jogador.nome || 
+                     jogador.nome_usuario || 
+                     jogador.nome_completo || 
+                     jogador.apelido ||
+                     jogador.name ||
+                     jogador.username ||
+                     `Jogador ${jogador.id || 'sem ID'}`;
+    } else {
+        nomeJogador = 'Jogador desconhecido';
+    }
+    
+    console.log('📝 Nome extraído:', { nomeJogador, jogadorOriginal: jogador });
+    
+    div.textContent = nomeJogador;
+    div.dataset.jogadorData = JSON.stringify({...jogador, time});
+    
+    div.addEventListener('click', function() {
+        console.log('👆 Jogador clicado:', nomeJogador);
+        
+        // Remover seleção anterior
+        document.querySelectorAll('.player-option.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        // Selecionar este jogador
+        this.classList.add('selected');
+        
+        // Atualizar substituto
+        atualizarSubstituto();
+    });
+    
+    return div;
+}
+
+// Fechar modal de substituição
+async function fecharSubstituicao() {
+    console.log('=======================================');
+    console.log('❌ INICIANDO FECHAMENTO DE SUBSTITUIÇÃO ❌');
+    console.log('=======================================');
+    
+    // Retomar cronômetro se foi pausado para substituição
+    if (estadoPartida.cronometroPausadoParaSubstituicao) {
+        console.log('▶️ Retomando cronômetro após substituição...');
+        console.log('📊 Estado ANTES da retomada:', {
+            pausado: estadoPartida.pausado,
+            tempoDecorrido: estadoPartida.tempoDecorrido,
+            tempoRestante: estadoPartida.tempoRestante,
+            dataInicio: estadoPartida.dataInicio
+        });
+        
+        // Calcular nova data de início baseada no tempo decorrido
+        const agora = new Date();
+        estadoPartida.dataInicio = new Date(agora.getTime() - (estadoPartida.tempoDecorrido * 1000));
+        
+        console.log('📊 Nova dataInicio calculada:', {
+            agora: agora,
+            tempoDecorrido: estadoPartida.tempoDecorrido,
+            novaDataInicio: estadoPartida.dataInicio
+        });
+        
+        estadoPartida.pausado = false;
+        console.log('▶️ Cronômetro retomado após fechar substituição');
+        
+        // Atualizar display imediatamente  
+        atualizarDisplayCronometro();
+        
+        // Salvar estado no banco
+        const dadosParaSalvar = { 
+            status: 'em_andamento',
+            tempo_decorrido: estadoPartida.tempoDecorrido
+        };
+        await atualizarJogoNoBanco(estadoPartida.jogoId, dadosParaSalvar);
+        
+        // Limpar flag
+        estadoPartida.cronometroPausadoParaSubstituicao = false;
+        
+        // Remover indicador visual de pausa
+        removerIndicadorPausa();
+        
+        // Atualizar visibilidade do botão
+        atualizarVisibilidadeBotaoSubstituicao();
+    }
+}
+
+// Indicador visual de pausa
+function adicionarIndicadorPausa(mensagem) {
+    // Remover indicador existente se houver
+    removerIndicadorPausa();
+    
+    const indicador = document.createElement('div');
+    indicador.id = 'indicador-pausa-substituicao';
+    indicador.style.cssText = `
+        position: fixed;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #ff9500, #ff6b35);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        border: 1px solid #ff8c00;
+        animation: fadeIn 0.3s ease;
+    `;
+    indicador.innerHTML = `⏸️ ${mensagem}`;
+    
+    document.body.appendChild(indicador);
+}
+
+function removerIndicadorPausa() {
+    const indicador = document.getElementById('indicador-pausa-substituicao');
+    if (indicador) {
+        indicador.remove();
+    }
+    
+    document.getElementById('modal-substituicao').style.display = 'none';
+    
+    // Resetar seleções
+    document.querySelectorAll('.player-option.selected').forEach(el => {
+        el.classList.remove('selected');
+    });
+    document.getElementById('substituto-info').style.display = 'none';
+    document.getElementById('btn-confirmar-substituicao').disabled = true;
+}
+
+// Atualizar informações do substituto quando jogador é selecionado
+async function atualizarSubstituto() {
+    const jogadorSelecionado = document.querySelector('.player-option.selected');
+    
+    if (!jogadorSelecionado) {
+        document.getElementById('substituto-info').style.display = 'none';
+        document.getElementById('btn-confirmar-substituicao').disabled = true;
+        return;
+    }
+    
+    try {
+        // Obter dados do jogador selecionado
+        const jogadorData = JSON.parse(jogadorSelecionado.dataset.jogadorData);
+        
+        // Obter fila atual
+        const filaAtual = await obterFilaCompleta();
+        const posicaoSubstituto = 13 + estadoPartida.contadorSubstituicoes;
+        
+        if (filaAtual.length >= posicaoSubstituto) {
+            const substituto = filaAtual[posicaoSubstituto - 1]; // Array é zero-indexed
+            
+            // Obter nome do substituto com fallback
+            console.log('🔍 DEBUG COMPLETO: Analisando substituto...');
+            console.log('📊 Objeto substituto completo:', JSON.stringify(substituto, null, 2));
+            
+            const nome1 = substituto.nome;
+            const nome2 = substituto.nome_usuario;
+            
+            // Para jogadores da fila (que não estão na tela), tentar buscar no banco
+            let nome3 = null;
+            if (!nome1 && !nome2) {
+                console.log('🔍 Jogador não está na tela (está na fila). Buscando diretamente no banco...');
+                try {
+                    // Buscar diretamente no banco SEM tentar obterNomeJogadorHTML primeiro
+                    const supabaseClient = initializeSupabase();
+                    if (supabaseClient) {
+                        console.log('🎯 Fazendo consulta direta na tabela usuarios para ID:', substituto.id);
+                        const { data: jogador, error } = await supabaseClient
+                            .from('usuarios')
+                            .select('*')
+                            .eq('id', substituto.id)
+                            .single();
+                        
+                        console.log('📋 Resultado da consulta direta:', { 
+                            encontrado: !!jogador, 
+                            erro: !!error, 
+                            detalhesErro: error,
+                            dadosJogador: jogador ? { 
+                                nome: jogador.nome, 
+                                nome_usuario: jogador.nome_usuario,
+                                id: jogador.id 
+                            } : null
+                        });
+                        
+                        if (!error && jogador) {
+                            nome3 = jogador.nome || jogador.nome_usuario;
+                            console.log('✅ Nome encontrado diretamente no banco:', nome3);
+                        } else {
+                            console.log('❌ Jogador não encontrado na tabela usuarios - Erro:', error?.message || 'Sem dados');
+                            
+                            // Tentar na tabela jogadores como alternativa
+                            console.log('🔄 Tentando buscar na tabela jogadores...');
+                            const { data: jogadorAlt, error: errorAlt } = await supabaseClient
+                                .from('jogadores')
+                                .select('*')
+                                .eq('id', substituto.id)
+                                .single();
+                                
+                            if (!errorAlt && jogadorAlt) {
+                                nome3 = jogadorAlt.nome || jogadorAlt.nome_usuario;
+                                console.log('✅ Nome encontrado na tabela jogadores:', nome3);
+                            } else {
+                                console.log('❌ Também não encontrado na tabela jogadores:', errorAlt?.message);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.log('❌ Erro ao buscar no banco:', error);
+                }
+            }
+            
+            const nome4 = `Jogador ${posicaoSubstituto}`;
+            
+            console.log('� Tentativas de nome:', {
+                'substituto.nome': nome1,
+                'substituto.nome_usuario': nome2,
+                'obterNomeJogadorHTML(id)': nome3,
+                'fallback final': nome4,
+                'ID usado para HTML': substituto.id
+            });
+            
+            const nomeSubstituto = nome1 || nome2 || nome3 || nome4;
+            
+            console.log('👤 DEBUG: Resultado final:', {
+                nomeEscolhido: nomeSubstituto,
+                elementoTarget: document.getElementById('nome-substituto')
+            });
+            
+            // Mostrar informações do substituto
+            console.log('� Nome final escolhido para exibição:', nomeSubstituto);
+            document.getElementById('nome-substituto').textContent = nomeSubstituto;
+            document.getElementById('posicao-substituto').textContent = `${posicaoSubstituto}º na fila`;
+            document.getElementById('substituto-info').style.display = 'block';
+            
+            // Habilitar botão confirmar
+            document.getElementById('btn-confirmar-substituicao').disabled = false;
+        } else {
+            alert('❌ Não há jogadores suficientes na fila!');
+            fecharSubstituicao();
+        }
+    } catch (error) {
+        console.error('Erro ao buscar substituto:', error);
+        alert('Erro ao carregar substituto. Tente novamente.');
+    }
+}
+
+// Confirmar substituição
+async function confirmarSubstituicao() {
+    const jogadorSelecionadoElement = document.querySelector('.player-option.selected');
+    if (!jogadorSelecionadoElement) return;
+    
+    const jogadorSelecionado = JSON.parse(jogadorSelecionadoElement.dataset.jogadorData);
+    
+    try {
+        // Obter substituto da fila
+        const filaAtual = await obterFilaCompleta();
+        const posicaoSubstituto = 13 + estadoPartida.contadorSubstituicoes;
+        
+        console.log('🔍 DEBUG substituição:', {
+            tamanhoFila: filaAtual.length,
+            posicaoNecessaria: posicaoSubstituto,
+            indiceArray: posicaoSubstituto - 1,
+            substitutoEncontrado: !!filaAtual[posicaoSubstituto - 1]
+        });
+        
+        const substituto = filaAtual[posicaoSubstituto - 1];
+        
+        if (!substituto) {
+            throw new Error(`Não há substituto na posição ${posicaoSubstituto} da fila`);
+        }
+        
+        console.log('🔄 Realizando substituição:', {
+            sai: jogadorSelecionado.nome,
+            entra: substituto.nome || substituto.nome_usuario || `ID: ${substituto.id}`,
+            posicao: posicaoSubstituto
+        });
+        
+        // Criar objeto de substituição para histórico
+        const substituicaoInfo = {
+            jogador_saiu: jogadorSelecionado,
+            jogador_entrou: substituto,
+            momento: new Date(),
+            tempo_jogo: formatarTempo(estadoPartida.duracaoTotal * 60 - estadoPartida.tempoRestante),
+            posicao_fila: posicaoSubstituto
+        };
+        
+        // Atualizar times na partida (manter apenas IDs)
+        if (jogadorSelecionado.time === 'A') {
+            const index = estadoPartida.timeA.findIndex(id => {
+                // Pode ser ID direto ou objeto com ID
+                const jogadorId = typeof id === 'object' ? id.id : id;
+                return jogadorId === jogadorSelecionado.id;
+            });
+            if (index !== -1) {
+                estadoPartida.timeA[index] = substituto.id;
+            }
+        } else {
+            const index = estadoPartida.timeB.findIndex(id => {
+                // Pode ser ID direto ou objeto com ID
+                const jogadorId = typeof id === 'object' ? id.id : id;
+                return jogadorId === jogadorSelecionado.id;
+            });
+            if (index !== -1) {
+                estadoPartida.timeB[index] = substituto.id;
+            }
+        }
+        
+        // Registrar substituição
+        estadoPartida.substituicoes.push(substituicaoInfo);
+        estadoPartida.contadorSubstituicoes++;
+        
+        // Salvar no banco
+        await salvarSubstituicao(substituicaoInfo);
+        console.log('✅ Substituição salva no banco');
+        
+        // Debug: verificar estado após substituição
+        console.log('🔄 Estados dos times após substituição:', {
+            timeA: estadoPartida.timeA,
+            timeB: estadoPartida.timeB
+        });
+        
+        // Atualizar interface
+        console.log('🔄 Atualizando interface...');
+        await renderizarTime('A', estadoPartida.timeA, 'team-a-players');
+        await renderizarTime('B', estadoPartida.timeB, 'team-b-players');
+        atualizarBotoes();
+        console.log('✅ Interface atualizada');
+        
+        // Fechar modal
+        fecharSubstituicao();
+        
+        // Obter nome do substituto para a mensagem
+        const nomeSubstitutoMsg = substituto.nome || substituto.nome_usuario || 
+                                obterNomeJogadorHTML(substituto.id) || 
+                                `Jogador ${posicaoSubstituto}`;
+        
+        alert(`✅ ${jogadorSelecionado.nome} foi substituído por ${nomeSubstitutoMsg}!`);
+        
+    } catch (error) {
+        console.error('Erro ao confirmar substituição:', error);
+        alert('Erro ao realizar substituição. Tente novamente.');
+    }
+}
+
+// Obter fila completa do banco
+async function obterFilaCompleta() {
+    try {
+        console.log('🔍 DEBUG obterFilaCompleta - Iniciando...');
+        const supabase = initializeSupabase();
+        if (!supabase) {
+            console.log('❌ Supabase não inicializado');
+            throw new Error('Supabase não inicializado');
+        }
+        console.log('✅ Supabase inicializado com sucesso');
+        
+        // Obter sessão ativa
+        console.log('🔍 Buscando sessão ativa...');
+        const sessaoAtiva = await obterSessaoAtiva();
+        if (!sessaoAtiva) {
+            console.log('❌ Nenhuma sessão ativa encontrada');
+            throw new Error('Nenhuma sessão ativa');
+        }
+        console.log('✅ Sessão ativa encontrada:', sessaoAtiva.id);
+        
+        // Buscar fila da sessão atual
+        console.log('🔍 Buscando fila da sessão...', 'ID da sessão:', sessaoAtiva.id);
+        
+        // IMPORTANTE: Buscar APENAS da tabela 'fila' (jogadores ativos presentes)
+        // NÃO buscar de 'reservas' (que são jogadores cadastrados mas talvez ausentes)
+        const { data: filaData, error: filaError } = await supabase
+            .from('fila')
+            .select(`
+                *,
+                sessao_id,
+                jogador_id,
+                posicao_fila,
+                created_at
+            `)
+            .eq('sessao_id', sessaoAtiva.id)
+            .order('posicao_fila', { ascending: true });
+            
+        if (filaError) {
+            console.log('❌ Erro ao buscar fila:', filaError);
+            throw filaError;
+        }
+        
+        console.log('📊 Dados da fila encontrados:', filaData ? filaData.length : 0, 'itens');
+        console.log('🎯 VERIFICAÇÃO: Buscando APENAS da tabela FILA (não reservas)');
+        console.log('📋 Primeiros 3 itens da fila:', filaData ? filaData.slice(0, 3) : []);
+        console.log('📋 Últimos 3 itens da fila:', filaData ? filaData.slice(-3) : []);
+        
+        if (!filaData || filaData.length === 0) {
+            console.log('⚠️ Fila vazia - retornando array vazio');
+            return [];
+        }
+        
+        // Verificar se há duplicatas na fila (possível problema no banco)
+        const sessoesUnicas = [...new Set(filaData.map(item => item.sessao_id))];
+        const jogadoresUnicos = [...new Set(filaData.map(item => item.jogador_id))];
+        console.log('🔍 Verificação da integridade da fila:', {
+            totalItens: filaData.length,
+            sessoesUnicas: sessoesUnicas.length,
+            jogadoresUnicos: jogadoresUnicos.length,
+            sessaoEsperada: sessaoAtiva.id,
+            sessoesEncontradas: sessoesUnicas,
+            haJogadoresDuplicados: jogadoresUnicos.length !== filaData.length
+        });
+        
+        // Se há jogadores duplicados na fila, filtrar para manter apenas um de cada
+        if (jogadoresUnicos.length !== filaData.length) {
+            console.warn('⚠️ DETECTADO: Jogadores duplicados na fila! Removendo duplicatas...');
+            const filaSemDuplicatas = filaData.filter((item, index, self) => 
+                index === self.findIndex(t => t.jogador_id === item.jogador_id)
+            );
+            console.log('✅ Fila filtrada:', filaSemDuplicatas.length, 'jogadores únicos (antes:', filaData.length, ')');
+            
+            // IMPORTANTE: Atualizar a variável filaData
+            filaData.splice(0, filaData.length, ...filaSemDuplicatas);
+            console.log('✅ Array filaData atualizado com', filaData.length, 'jogadores únicos');
+        }
+        
+        // Buscar dados dos jogadores
+        console.log('🔍 Buscando dados dos jogadores...');
+        const jogadorIds = filaData.map(item => item.jogador_id);
+        console.log('👥 IDs dos jogadores na fila (após filtro):', jogadorIds.length, 'IDs:', jogadorIds.slice(0, 5), '...');
+        
+        const { data: jogadoresData, error: jogadoresError } = await supabase
+            .from('usuarios')
+            .select('*')
+            .in('id', jogadorIds);
+            
+        if (jogadoresError) {
+            console.log('❌ Erro ao buscar jogadores:', jogadoresError);
+            throw jogadoresError;
+        }
+        
+        console.log('👥 Dados dos jogadores encontrados:', jogadoresData ? jogadoresData.length : 0);
+        
+        // Se não encontrou dados dos usuários, buscar individualmente no banco
+        if (!jogadoresData || jogadoresData.length === 0) {
+            console.error('❌ CRÍTICO: Nenhum dado de jogador encontrado na busca em lote!');
+            console.log('🔍 Tentando buscar jogadores individualmente...');
+            
+            // Buscar cada jogador individualmente no banco
+            const filaComNomes = await Promise.all(filaData.map(async (filaItem) => {
+                try {
+                    console.log(`🔍 Buscando individualmente jogador ${filaItem.jogador_id}...`);
+                    const { data: jogador, error } = await supabase
+                        .from('usuarios')
+                        .select('*')
+                        .eq('id', filaItem.jogador_id)
+                        .single();
+                    
+                    if (!error && jogador) {
+                        console.log(`✅ Encontrado: ${jogador.nome || jogador.nome_usuario}`);
+                        return {
+                            ...jogador,
+                            posicao_fila: filaItem.posicao_fila
+                        };
+                    } else {
+                        console.warn(`❌ Jogador ${filaItem.jogador_id} não encontrado individualmente`);
+                        return {
+                            id: filaItem.jogador_id,
+                            nome: null, // Deixar null para ser tratado depois
+                            nome_usuario: null,
+                            posicao_fila: filaItem.posicao_fila
+                        };
+                    }
+                } catch (error) {
+                    console.error(`❌ Erro ao buscar ${filaItem.jogador_id}:`, error);
+                    return {
+                        id: filaItem.jogador_id,
+                        nome: null,
+                        nome_usuario: null,
+                        posicao_fila: filaItem.posicao_fila
+                    };
+                }
+            }));
+            
+            console.log('✅ Fila montada com busca individual:', filaComNomes.length, 'jogadores');
+            return filaComNomes;
+        }
+        
+        // Combinar dados da fila com dados dos jogadores
+        const filaCompleta = filaData.map(filaItem => {
+            const jogador = jogadoresData.find(j => j.id === filaItem.jogador_id);
+            if (!jogador) {
+                console.warn(`⚠️ Jogador ${filaItem.jogador_id} não encontrado na tabela usuarios`);
+                // Fallback para jogador não encontrado
+                const nomeHTML = obterNomeJogadorHTML(filaItem.jogador_id);
+                return {
+                    id: filaItem.jogador_id,
+                    nome: nomeHTML || `Jogador ${filaItem.posicao_fila}`,
+                    nome_usuario: nomeHTML || `Jogador ${filaItem.posicao_fila}`,
+                    posicao_fila: filaItem.posicao_fila
+                };
+            }
+            
+            return {
+                ...jogador,
+                posicao_fila: filaItem.posicao_fila
+            };
+        });
+        
+        console.log('✅ Fila completa montada com', filaCompleta.length, 'jogadores');
+        
+        // Log do 13º jogador para debug
+        if (filaCompleta.length >= 13) {
+            console.log('👤 13º jogador na fila:', filaCompleta[12]);
+        } else {
+            console.log('❌ Não há 13º jogador - fila tem apenas', filaCompleta.length, 'jogadores');
+        }
+        
+        return filaCompleta;
+    } catch (error) {
+        console.error('❌ Erro ao obter fila:', error);
+        return []; // Retorna array vazio em caso de erro em vez de lançar
+    }
+}
+
+// Salvar substituição no banco
+async function salvarSubstituicao(substituicaoInfo) {
+    try {
+        console.log('💾 Tentando salvar substituição:', substituicaoInfo);
+        
+        // Por enquanto, apenas loggar a substituição
+        // TODO: Implementar tabela específica para substituições se necessário
+        console.log('📋 Substituições atuais do estado:', estadoPartida.substituicoes);
+        console.log('✅ Substituição registrada no estado da partida (não salva no banco)');
+        
+        // Comentado até que a estrutura do banco seja ajustada
+        /*
+        const supabase = initializeSupabase();
+        if (!supabase) throw new Error('Supabase não inicializado');
+        
+        // Obter sessão ativa para salvar a substituição
+        const sessaoAtiva = await obterSessaoAtiva();
+        if (!sessaoAtiva) throw new Error('Nenhuma sessão ativa');
+        
+        const { error } = await supabase
+            .from('sessoes')
+            .update({ 
+                substituicoes: estadoPartida.substituicoes
+            })
+            .eq('id', sessaoAtiva.id);
+            
+        if (error) throw error;
+        console.log('✅ Substituição salva no banco');
+        */
+    } catch (error) {
+        console.error('Erro ao salvar substituição:', error);
+        // Não interrompe o fluxo em caso de erro de salvamento
+    }
+}
+
+// Processar estatísticas considerando substituições
+function processarEstatisticasComSubstituicoes(timeVencedor) {
+    // Identificar jogadores que saíram antes do final
+    const jogadoresSairam = estadoPartida.substituicoes.map(sub => sub.jogador_saiu.id);
+    
+    // Atualizar estatísticas apenas dos jogadores que terminaram o jogo
+    const estatisticasFinais = {
+        vencedores: [],
+        perdedores: [],
+        jogadoresSairamAntes: []
+    };
+    
+    // Processar Time A
+    estadoPartida.timeA.forEach(jogador => {
+        if (jogadoresSairam.includes(jogador.id)) {
+            // Jogador saiu antes - só conta jogos, mantém gols
+            estatisticasFinais.jogadoresSairamAntes.push({
+                ...jogador,
+                contaVitoria: false,
+                contaDerrota: false,
+                contaJogo: true
+            });
+        } else {
+            // Jogador terminou o jogo
+            if (timeVencedor === 'A') {
+                estatisticasFinais.vencedores.push(jogador);
+            } else {
+                estatisticasFinais.perdedores.push(jogador);
+            }
+        }
+    });
+    
+    // Processar Time B
+    estadoPartida.timeB.forEach(jogador => {
+        if (jogadoresSairam.includes(jogador.id)) {
+            // Jogador saiu antes - só conta jogos, mantém gols
+            estatisticasFinais.jogadoresSairamAntes.push({
+                ...jogador,
+                contaVitoria: false,
+                contaDerrota: false,
+                contaJogo: true
+            });
+        } else {
+            // Jogador terminou o jogo
+            if (timeVencedor === 'B') {
+                estatisticasFinais.vencedores.push(jogador);
+            } else {
+                estatisticasFinais.perdedores.push(jogador);
+            }
+        }
+    });
+    
+    return estatisticasFinais;
+}
+
+// Controlar visibilidade do botão de substituição
+function atualizarVisibilidadeBotaoSubstituicao() {
+    const botaoSubstituicao = document.getElementById('substitute-footer-btn');
+    if (!botaoSubstituicao) return;
+    
+    // Mostrar se partida estiver ativa e (não pausada OU pausada apenas para substituição)
+    if (estadoPartida.iniciado && (!estadoPartida.pausado || estadoPartida.cronometroPausadoParaSubstituicao)) {
+        botaoSubstituicao.style.display = 'block';
+    } else {
+        botaoSubstituicao.style.display = 'none';
+    }
+}
+
+// Função de debug para testes rápidos
+function debugIniciarJogo() {
+    console.log('🎮 FUNÇÃO DEBUG: Iniciando jogo para teste...');
+    estadoPartida.iniciado = true;
+    estadoPartida.pausado = false;
+    estadoPartida.dataInicio = new Date();
+    estadoPartida.duracaoTotal = 15; // 15 minutos para teste
+    estadoPartida.tempoDecorrido = 0;
+    estadoPartida.tempoRestante = 15 * 60; // 15 minutos em segundos
+    
+    // Atualizar display
+    atualizarDisplayCronometro();
+    console.log('✅ Jogo iniciado para debug:', estadoPartida);
+}
+
+// Função de debug para testar substituição
+function debugTestarSubstituicao() {
+    console.log('🔄 FUNÇÃO DEBUG: Testando substituição...');
+    abrirSubstituicao();
+}
+
+// Função de debug para testar empate
+async function debugTestarEmpate() {
+    console.log('🤝 FUNÇÃO DEBUG: Testando modal de empate...');
+    
+    // Usar dados simples primeiro para testar
+    estadoPartida.placarA = 2;
+    estadoPartida.placarB = 2;
+    estadoPartida.coresColetes = { timeA: 'black', timeB: 'red' };
+    
+    // Simular estrutura com nomes diretos para testar
+    estadoPartida.timeA = [
+        { nome: 'João Silva', posicao: 'atacante' }, 
+        { nome: 'Pedro Santos', posicao: 'meio-campo' }
+    ];
+    estadoPartida.timeB = [
+        { nome_usuario: 'Carlos Lima', posicao: 'defesa' }, 
+        { name: 'Miguel Costa', posicao: 'goleiro' }
+    ];
+    
+    console.log('🔍 Times configurados para teste:', {
+        timeA: estadoPartida.timeA,
+        timeB: estadoPartida.timeB
+    });
+    
+    // Mostrar modal
+    mostrarModalConfirmarEmpate();
+}
+
+// Função auxiliar para listar jogadores da sessão para debug
+async function debugListarJogadoresSessao() {
+    try {
+        console.log('🔍 === DEBUG: LISTANDO JOGADORES DA SESSÃO ===');
+        
+        const { data: sessaoData, error } = await supabaseClient
+        
+        if (error) {
+            console.log('❌ Erro ao buscar sessão:', error);
+            return;
+        }
+        
+        if (!sessaoData) {
+            console.log('❌ Nenhuma sessão ativa encontrada');
+            return;
+        }
+        
+        console.log('✅ Sessão encontrada:', sessaoData.id);
+        console.log('📊 Time A:', sessaoData.time_a);
+        console.log('📊 Time B:', sessaoData.time_b);
+        
+        if (sessaoData.time_a) {
+            console.log('👥 Jogadores Time A:');
+            sessaoData.time_a.forEach((jogador, index) => {
+                console.log(`  ${index + 1}. ID: ${jogador.id || jogador.userId || 'N/A'} | Nome: ${jogador.nome || 'N/A'}`);
+            });
+        }
+        
+        if (sessaoData.time_b) {
+            console.log('👥 Jogadores Time B:');
+            sessaoData.time_b.forEach((jogador, index) => {
+                console.log(`  ${index + 1}. ID: ${jogador.id || jogador.userId || 'N/A'} | Nome: ${jogador.nome || 'N/A'}`);
+            });
+        }
+        
+    } catch (error) {
+        console.log('❌ Erro na função debug:', error);
+    }
+}
+
+// Chamar automaticamente o debug quando a página carregar
+window.debugListarJogadoresSessao = debugListarJogadoresSessao;
+
+// Função utilitária para obter nome do jogador dos elementos HTML
+function obterNomeJogadorHTML(jogadorId) {
+    console.log('🔍 obterNomeJogadorHTML chamado com ID:', jogadorId);
+    
+    if (!jogadorId) {
+        console.log('❌ ID vazio ou nulo');
+        return null;
+    }
+    
+    // Buscar nos elementos já renderizados na tela
+    const seletor = `[data-jogador-id="${jogadorId}"]`;
+    console.log('🎯 Buscando seletor:', seletor);
+    
+    const elementoJogador = document.querySelector(seletor);
+    console.log('📱 Elemento encontrado:', !!elementoJogador);
+    
+    if (elementoJogador) {
+        const nome = elementoJogador.getAttribute('data-nome');
+        console.log('✅ Nome encontrado na tela:', nome, 'para ID:', jogadorId);
+        console.log('🔍 Elemento completo:', elementoJogador);
+        return nome;
+    }
+    
+    // Verificar todos os elementos com data-jogador-id para debug
+    const todosElementos = document.querySelectorAll('[data-jogador-id]');
+    console.log('🔍 DEBUG: Todos elementos com data-jogador-id:', todosElementos.length);
+    console.log('🔍 IDs disponíveis na tela:', Array.from(todosElementos).map(el => el.getAttribute('data-jogador-id')).slice(0, 10));
+    
+    // Fallback
+    console.log('❌ Nome não encontrado na tela para ID:', jogadorId);
+    return `Jogador ${jogadorId.substring(0, 8)}`;
+}
+
+// Função para mostrar alerta de lembrete das cores dos coletes
+function mostrarAlertaCoresColetes() {
+    // Criar elemento do alerta
+    const alertDiv = document.createElement('div');
+    alertDiv.id = 'alerta-cores-coletes';
+    alertDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(145deg, #4CAF50 0%, #2E7D32 100%);
+        color: white;
+        padding: 25px 35px;
+        border-radius: 20px;
+        font-size: 16px;
+        font-weight: 600;
+        text-align: center;
+        box-shadow: 0 15px 35px rgba(76, 175, 80, 0.4), 0 5px 15px rgba(0,0,0,0.12);
+        z-index: 10000;
+        border: 2px solid rgba(255,255,255,0.2);
+        backdrop-filter: blur(10px);
+        max-width: 90%;
+        line-height: 1.5;
+        animation: slideIn 0.5s ease-out;
+    `;
+    
+    // CSS das animações
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = `
+        @keyframes slideIn {
+            from { 
+                transform: translate(-50%, -50%) scale(0.7);
+                opacity: 0;
+            }
+            to { 
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .emoji-cores {
+            font-size: 20px;
+            margin: 0 8px;
+            display: inline-block;
+            animation: rotate 2s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(styleSheet);
+    
+    let contador = 10;
+    
+    function atualizarTexto() {
+        alertDiv.innerHTML = `
+            <div style="margin-bottom: 15px; font-size: 18px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                ⚡ <strong>CONFIGURAR CORES</strong> ⚡
+            </div>
+            <div style="margin-bottom: 15px; font-size: 14px; opacity: 0.95;">
+                Selecione a cor do <strong>colete</strong> de cada time
+            </div>
+            <div style="margin-bottom: 20px; font-size: 14px; display: flex; align-items: center; justify-content: center;">
+                <span class="emoji-cores">⚫</span>
+                <span style="margin: 0 10px;">Clique nos círculos</span>
+                <span class="emoji-cores">🔴</span>
+            </div>
+            <div style="font-size: 28px; color: #FFD700; font-weight: bold; text-shadow: 0 3px 6px rgba(0,0,0,0.4);">
+                ${contador}s
+            </div>
+            <div style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
+                Clique para fechar
+            </div>
+        `;
+    }
+    
+    // Primeira atualização
+    atualizarTexto();
+    
+    // Adicionar ao DOM
+    document.body.appendChild(alertDiv);
+    
+    // Iniciar contagem regressiva
+    const intervalContador = setInterval(() => {
+        contador--;
+        atualizarTexto();
+        
+        if (contador <= 0) {
+            clearInterval(intervalContador);
+            fecharAlerta();
+        }
+    }, 1000);
+    
+    function fecharAlerta() {
+        alertDiv.style.animation = 'none';
+        alertDiv.style.transform = 'translate(-50%, -50%) scale(0)';
+        alertDiv.style.opacity = '0';
+        alertDiv.style.transition = 'all 0.3s ease-out';
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) alertDiv.remove();
+            if (styleSheet.parentNode) styleSheet.remove();
+        }, 300);
+    }
+    
+    // Permitir fechar clicando no alerta
+    alertDiv.addEventListener('click', () => {
+        clearInterval(intervalContador);
+        fecharAlerta();
+    });
 }

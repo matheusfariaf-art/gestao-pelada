@@ -131,14 +131,21 @@
                 </div>
                 
                 <div class="selecao-prioridade" id="selecao-prioridade" style="display: none;">
-                    <h4>Quem fica na fila?</h4>
+                    <h4>Quem retorna primeiro?</h4>
                     <div class="botoes-times">
-                        <button class="btn-time preto" id="btn-prioridade-preto" data-time="preto">
-                            ⚫ <span id="nome-time-preto">PRETO</span>
-                        </button>
-                        <button class="btn-time vermelho" id="btn-prioridade-vermelho" data-time="vermelho">
-                            🔴 <span id="nome-time-vermelho">VERMELHO</span>
-                        </button>
+                        <div class="time-container">
+                            <button class="btn-time preto" id="btn-prioridade-preto" data-time="preto">
+                                <span id="nome-time-preto">PRETO</span>
+                            </button>
+                            <div class="primeiro-jogador" id="primeiro-jogador-tempo-preto"></div>
+                        </div>
+                        
+                        <div class="time-container">
+                            <button class="btn-time vermelho" id="btn-prioridade-vermelho" data-time="vermelho">
+                                <span id="nome-time-vermelho">VERMELHO</span>
+                            </button>
+                            <div class="primeiro-jogador" id="primeiro-jogador-tempo-vermelho"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -180,14 +187,21 @@
                 </div>
                 
                 <div class="selecao-prioridade">
-                    <h4>Quem fica na fila?</h4>
+                    <h4>Quem retorna primeiro?</h4>
                     <div class="botoes-times">
-                        <button class="btn-time preto" id="btn-empate-preto" data-time="preto">
-                            ⚫ <span id="nome-empate-preto">PRETO</span>
-                        </button>
-                        <button class="btn-time vermelho" id="btn-empate-vermelho" data-time="vermelho">
-                            🔴 <span id="nome-empate-vermelho">VERMELHO</span>
-                        </button>
+                        <div class="time-container">
+                            <button class="btn-time preto" id="btn-empate-preto" data-time="preto">
+                                <span id="nome-empate-preto">PRETO</span>
+                            </button>
+                            <div class="primeiro-jogador" id="primeiro-jogador-preto"></div>
+                        </div>
+                        
+                        <div class="time-container">
+                            <button class="btn-time vermelho" id="btn-empate-vermelho" data-time="vermelho">
+                                <span id="nome-empate-vermelho">VERMELHO</span>
+                            </button>
+                            <div class="primeiro-jogador" id="primeiro-jogador-vermelho"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -250,20 +264,64 @@
     <!-- Footer Mobile -->
     <footer class="footer-mobile">
         <nav class="nav-mobile">
+            <a href="#" class="nav-item guest-hidden" onclick="window.location.href='fila.html#gerenciar'; return false;">
+                <span class="emoji">👥</span>
+            </a>
             <a href="fila.html" class="nav-item">
                 <span class="emoji">📋</span>
             </a>
             <a href="partida.html" class="nav-item active">
                 <span class="emoji">⚽</span>
             </a>
-            <a href="resultados.html" class="nav-item">
-                <span class="emoji">🏆</span>
+            <a href="#" class="nav-item" id="substitute-footer-btn" onclick="abrirSubstituicao(); return false;" style="display: none;">
+                <span class="emoji">🔄</span>
             </a>
             <a href="#" class="nav-item" id="cancel-footer-btn" style="display: none;">
                 <span class="emoji">❌</span>
             </a>
         </nav>
     </footer>
+
+    <!-- Modal Substituição -->
+    <div id="modal-substituicao" class="modal" style="display: none;">
+        <div class="modal-content modal-substituicao-content">
+            <div class="modal-header-simples">
+                <span class="modal-title">🔄 Substituição</span>
+                <button class="modal-close-btn" onclick="fecharSubstituicao()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Quem saiu?</label>
+                    <div class="teams-grid">
+                        <div class="team-column">
+                            <h4 class="team-title">Time Preto</h4>
+                            <div class="players-list" id="substituicao-team-a-players">
+                                <!-- Jogadores do Time A serão inseridos aqui -->
+                            </div>
+                        </div>
+                        <div class="team-column">
+                            <h4 class="team-title">Time Vermelho</h4>
+                            <div class="players-list" id="substituicao-team-b-players">
+                                <!-- Jogadores do Time B serão inseridos aqui -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="substituto-info" id="substituto-info" style="display: none;">
+                    <div class="info-card">
+                        <strong>Entrará:</strong>
+                        <span id="nome-substituto"></span>
+                        <span id="posicao-substituto" class="position-badge"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="fecharSubstituicao()">❌ Cancelar</button>
+                <button class="btn-confirm" id="btn-confirmar-substituicao" onclick="confirmarSubstituicao()" disabled>✅ Confirmar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal de Confirmações -->
     <div id="modal-confirmacao" class="modal">
@@ -360,7 +418,6 @@
     </div>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="database.js"></script>
     <script src="auth-protection.js"></script>
     <script src="vitoria-controle.js"></script>
     <script src="partida.js"></script>

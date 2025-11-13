@@ -87,47 +87,67 @@
                 </div>
             </section>
 
-            <!-- Painel de Gerenciamento de Jogadores -->
+            <!-- Painel de Gerenciamento Unificado -->
             <section id="painel-gerenciamento" class="management-panel" style="display: none;">
-                <div class="management-content">
+                <div class="management-content-unified">
                     <div class="management-header">
                         <h3>⚡ Gerenciar Jogadores</h3>
                         <button class="btn-close" onclick="fecharGerenciamento()">×</button>
                     </div>
-                
-                <div class="management-options">
-                    <button class="management-option" onclick="mostrarAdicionar()">
-                        <span class="emoji">➕</span>
-                        <div class="option-info">
-                            <strong>Adicionar</strong>
-                            <small>Da reserva para a fila</small>
-                        </div>
-                    </button>
                     
-                    <button class="management-option" onclick="mostrarRemover()">
-                        <span class="emoji">➖</span>
-                        <div class="option-info">
-                            <strong>Remover</strong>
-                            <small>Da fila para reserva</small>
-                        </div>
-                    </button>
+                    <!-- Busca -->
+                    <div class="management-search">
+                        <input type="text" id="search-players" placeholder="🔍 Buscar jogador..." autocomplete="off">
+                    </div>
                     
-                    <button class="management-option" onclick="mostrarSubstituir()">
-                        <span class="emoji">🔄</span>
-                        <div class="option-info">
-                            <strong>Substituir</strong>
-                            <small>Trocar posições</small>
+                    <!-- Interface de 2 colunas (mobile-first) -->
+                    <div class="management-columns">
+                        <!-- Coluna 1: Reservas -->
+                        <div class="column reserves-column">
+                            <div class="column-header">
+                                <h4>🪑 Reservas (<span id="reserves-count">0</span>)</h4>
+                                <small>Arraste para a fila</small>
+                            </div>
+                            <div class="column-content">
+                                <div id="reserves-list" class="player-list-drag">
+                                    <div class="loading-placeholder">Carregando reservas...</div>
+                                </div>
+                            </div>
                         </div>
-                    </button>
+                        
+                        <!-- Coluna 2: Fila -->
+                        <div class="column queue-column">
+                            <div class="column-header">
+                                <h4>📋 Fila (<span id="queue-count">0</span>)</h4>
+                                <small>Arraste para reorganizar</small>
+                            </div>
+                            <div class="column-content">
+                                <div id="queue-list" class="player-list-drag">
+                                    <div class="loading-placeholder">Carregando fila...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <button class="management-option" onclick="mostrarEditarOrdem()">
-                        <span class="emoji">📝</span>
-                        <div class="option-info">
-                            <strong>Editar Ordem</strong>
-                            <small>Reorganizar fila</small>
+                    <!-- Ações -->
+                    <div class="management-actions">
+                        <div class="actions-left">
+                            <button id="btn-undo" class="btn-secondary" disabled onclick="undoLastChange()">
+                                ↶ Desfazer
+                            </button>
+                            <button id="btn-clear" class="btn-secondary" onclick="clearAllChanges()">
+                                �️ Limpar
+                            </button>
                         </div>
-                    </button>
-                </div>
+                        <div class="actions-right">
+                            <span id="changes-indicator" class="changes-count" style="display: none;">
+                                <span id="changes-number">0</span> mudanças
+                            </span>
+                            <button id="btn-apply" class="btn-primary" disabled onclick="applyAllChanges()">
+                                ✅ Aplicar (<span id="changes-number-btn">0</span>)
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -148,16 +168,13 @@
     <footer class="footer-mobile">
         <nav class="nav-mobile">
             <a href="#" class="nav-item guest-hidden" onclick="mostrarGerenciamento(); return false;">
-                <span class="emoji">🔄</span>
+                <span class="emoji">👥</span>
             </a>
             <a href="fila.html" class="nav-item active">
                 <span class="emoji">📋</span>
             </a>
             <a href="partida.html" class="nav-item">
                 <span class="emoji">⚽</span>
-            </a>
-            <a href="resultados.html" class="nav-item">
-                <span class="emoji">🏆</span>
             </a>
             <a href="#" class="nav-item guest-hidden" onclick="encerrarPelada(); return false;">
                 <span class="emoji">🏁</span>
@@ -183,6 +200,43 @@
         </div>
     </div>
 
+    <!-- Modal de Gerenciamento Unificado -->
+    <div id="gerenciamento-modal" class="modal-unified">
+        <div class="modal-content-unified">
+            <div class="modal-header-unified">
+                <h2>⚽ Gerenciar Fila</h2>
+                <button class="close-btn-unified" onclick="fecharGerenciamentoUnificado()">&times;</button>
+            </div>
+            
+            <div class="management-content-unified">
+                <div class="fila-section">
+                    <h3>🎯 Fila <span id="fila-count">(0)</span></h3>
+                    <p class="section-subtitle">Arraste para reorganizar</p>
+                    <div id="fila-list" class="players-list fila-container">
+                        <!-- Lista da fila será carregada aqui -->
+                    </div>
+                </div>
+                
+                <div class="reservas-section">
+                    <h3>📋 Reservas <span id="reservas-count">(22)</span></h3>
+                    <p class="section-subtitle">Arraste para a fila</p>
+                    <div id="reservas-list" class="players-list reservas-container">
+                        <!-- Lista de reservas será carregada aqui -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-unified">
+                <button class="btn-acao btn-desfazer" onclick="desfazerUltimaAcao()" disabled>
+                    � Desfazer
+                </button>
+                <button class="btn-acao btn-aplicar" onclick="aplicarAlteracoes()">
+                    ✅ Aplicar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Remover Jogadores -->
     <div id="modal-remover" class="modal" style="display: none;">
         <div class="modal-content">
@@ -203,7 +257,7 @@
     <div id="modal-substituir" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>🔄 Substituir Jogadores</h3>
+                <h3>� Substituir Jogadores</h3>
                 <button class="btn-close" onclick="fecharModal('modal-substituir')">×</button>
             </div>
             <div class="modal-body">
@@ -293,7 +347,7 @@
                 </button>
                 
                 <button id="refresh-queue-btn" class="refresh-queue-btn">
-                    <span class="emoji">🔄</span>
+                    <span class="emoji">�</span>
                     <span class="text">Verificar Novamente</span>
                 </button>
             </div>
