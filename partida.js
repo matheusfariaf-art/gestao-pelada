@@ -3514,7 +3514,9 @@ function mostrarAlertaCoresColetes() {
         z-index: 10000;
         border: 2px solid rgba(255,255,255,0.2);
         backdrop-filter: blur(10px);
-        max-width: 90%;
+        max-width: 320px;
+        width: 320px;
+        min-height: 180px;
         line-height: 1.5;
         animation: slideIn 0.5s ease-out;
     `;
@@ -3551,13 +3553,13 @@ function mostrarAlertaCoresColetes() {
     
     function atualizarTexto() {
         alertDiv.innerHTML = `
-            <div style="margin-bottom: 15px; font-size: 18px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+            <div style="margin-bottom: 15px; font-size: 18px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); white-space: nowrap;">
                 ⚡ <strong>CONFIGURAR CORES</strong> ⚡
             </div>
-            <div style="margin-bottom: 15px; font-size: 14px; opacity: 0.95;">
+            <div style="margin-bottom: 15px; font-size: 14px; opacity: 0.95; white-space: nowrap;">
                 Selecione a cor do <strong>colete</strong> de cada time
             </div>
-            <div style="margin-bottom: 20px; font-size: 14px; display: flex; align-items: center; justify-content: center;">
+            <div style="margin-bottom: 20px; font-size: 14px; display: flex; align-items: center; justify-content: center; white-space: nowrap;">
                 <span class="emoji-cores">⚫</span>
                 <span style="margin: 0 10px;">Clique nos círculos</span>
                 <span class="emoji-cores">🔴</span>
@@ -3565,7 +3567,7 @@ function mostrarAlertaCoresColetes() {
             <div style="font-size: 28px; color: #FFD700; font-weight: bold; text-shadow: 0 3px 6px rgba(0,0,0,0.4);">
                 ${contador}s
             </div>
-            <div style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
+            <div style="margin-top: 15px; font-size: 12px; opacity: 0.8; white-space: nowrap;">
                 Clique para fechar
             </div>
         `;

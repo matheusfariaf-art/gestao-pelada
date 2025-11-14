@@ -236,7 +236,7 @@ body {
 .player-item {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 6px;
     background: #f8f9fa;
     border-radius: 8px;
     border: 1px solid #e9ecef;
@@ -250,10 +250,10 @@ body {
 }
 
 .player-name {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-weight: 500;
     width: 100%;
-    text-align: left;
+    text-align: center;
 }
 
 .goal-btn {
@@ -1831,5 +1831,39 @@ body {
     
     .modal-header-simples {
         padding: 8px 10px;
+    }
+}
+
+/* ========== OTIMIZAÇÕES ESPECÍFICAS PARA PLAYER ITEMS ========== */
+/* Garantir aplicação das otimizações em todos os contextos */
+
+.player-item {
+    padding: 6px !important;
+    min-height: 36px !important;
+}
+
+.player-name {
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+}
+
+/* Mobile específico */
+@media (max-width: 480px) {
+    .player-item {
+        padding: 4px !important;
+        min-height: 32px !important;
+    }
+    
+    .player-name {
+        font-size: 0.7rem !important;
+        line-height: 1.1 !important;
+        text-align: center !important;
+    }
+    
+    .goal-btn {
+        padding: 3px 6px !important;
+        font-size: 0.65rem !important;
+        min-width: 28px !important;
     }
 }

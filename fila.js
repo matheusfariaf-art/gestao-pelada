@@ -1570,7 +1570,6 @@ function fecharGerenciamento() {
     // Se usando painel unificado, limpar estado
     if (unifiedManagementState && unifiedManagementState.isOpen) {
         unifiedManagementState.isOpen = false;
-        unifiedManagementState.changes = [];
         unifiedManagementState.draggedElement = null;
     }
 }
@@ -3002,7 +3001,6 @@ const unifiedManagementState = {
     originalReserves: [],
     workingQueue: [],
     workingReserves: [],
-    changes: [],
     draggedElement: null,
     searchTerm: '',
     previewVisible: true,
@@ -3070,7 +3068,6 @@ async function mostrarGerenciamentoUnificado() {
     unifiedManagementState.originalReserves = [...(gameState.reserves || [])];
     unifiedManagementState.filaLocal = [...(gameState.queue || [])];
     unifiedManagementState.reservasLocal = [...(gameState.reserves || [])];
-    unifiedManagementState.changes = [];
 
     // Mostrar modal fullscreen
     modal.style.display = 'block';
@@ -3126,15 +3123,15 @@ async function loadUnifiedLists() {
 
     try {
         // Sempre recarregar as listas com os dados locais
-        const reservesHTML = await renderDragPlayersList(unifiedManagementState.reservasLocal, 'reserve');
-        const queueHTML = await renderDragPlayersList(unifiedManagementState.filaLocal, 'queue');
+        const reservesHTML = await renderPlayersList(unifiedManagementState.reservasLocal, 'reserve');
+        const queueHTML = await renderPlayersList(unifiedManagementState.filaLocal, 'queue');
 
         reservesList.innerHTML = reservesHTML;
         queueList.innerHTML = queueHTML;
 
-        // Setup drag & drop
-        setupDragAndDrop();
-        
+        // Configurar botão mover inicial
+        atualizarBotaoMover();
+
         console.log('✅ Listas carregadas:', {
             reservas: unifiedManagementState.reservasLocal.length,
             fila: unifiedManagementState.filaLocal.length
@@ -3147,7 +3144,528 @@ async function loadUnifiedLists() {
     }
 }
 
-// Renderizar lista de jogadores para drag & drop
+// Renderizar lista de jogadores com seleção
+async function renderPlayersList(players, type) {
+    if (!players || players.length === 0) {
+        return `<div class="empty-list">
+            <span>${type === 'reserve' ? '🪑 Nenhuma reserva' : '📋 Fila vazia'}</span>
+        </div>`;
+    }
+
+    let html = '';
+    for (let i = 0; i < players.length; i++) {
+        const player = players[i];
+        const position = type === 'queue' ? i + 1 : 'R';
+        
+        // Extrair nome e ID baseado no tipo
+        let nomeJogador, playerId;
+        
+        if (type === 'queue') {
+            playerId = player.jogador_id;
+            nomeJogador = player.jogador?.nome || 
+                         player.jogador?.nome_usuario || 
+                         `Jogador #${player.jogador?.id || player.jogador_id}`;
+        } else {
+            playerId = player.id;
+            nomeJogador = player.nome || 
+                         player.nome_usuario || 
+                         `Jogador #${player.id}`;
+        }
+        
+        // Atributos para drag & drop (apenas fila pode ser reordenada)
+        const dragAttrs = type === 'queue' ? 
+            `draggable="true" ondragstart="startDragReorder(event)" ondragover="allowDrop(event)" ondrop="dropReorder(event)"` : 
+            '';
+        
+        html += `
+        <div class="player-item ${type}-item ${type === 'queue' ? 'draggable-item' : ''}" 
+             onclick="selecionarJogador('${playerId}', '${type}', ${i})" 
+             data-player-id="${playerId}" 
+             data-type="${type}" 
+             data-position="${i}"
+             ${dragAttrs}>
+            <div class="player-position">${position}</div>
+            <div class="player-name">${nomeJogador}</div>
+        </div>`;
+    }
+
+    return html;
+}
+
+// ========== FUNÇÕES GLOBAIS DE DRAG & DROP (EVENTOS INLINE) ==========
+
+let draggedQueueItem = null;
+
+// Iniciar drag (função global)
+function startDragReorder(event) {
+    console.log('🚀 DRAG INICIADO!', event.target);
+    
+    const item = event.target.closest('.player-item');
+    draggedQueueItem = {
+        element: item,
+        playerId: item.dataset.playerId,
+        position: parseInt(item.dataset.position),
+        type: item.dataset.type
+    };
+    
+    item.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    
+    console.log('📦 Item arrastado:', draggedQueueItem);
+}
+
+// Permitir drop (função global)
+function allowDrop(event) {
+    event.preventDefault();
+    const targetItem = event.target.closest('.player-item');
+    if (targetItem && targetItem.dataset.type === 'queue' && draggedQueueItem) {
+        // Limpar highlights anteriores
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        // Adicionar highlight
+        targetItem.classList.add('drag-over');
+    }
+}
+
+// Executar drop (função global)
+function dropReorder(event) {
+    event.preventDefault();
+    console.log('📥 DROP EXECUTADO!');
+    
+    const targetItem = event.target.closest('.player-item');
+    if (!targetItem || !draggedQueueItem) {
+        console.warn('⚠️ Sem target ou item arrastado');
+        cleanupReorderDrag();
+        return;
+    }
+    
+    const targetPosition = parseInt(targetItem.dataset.position);
+    
+    if (draggedQueueItem.type === 'queue' && targetItem.dataset.type === 'queue' && draggedQueueItem.position !== targetPosition) {
+        console.log(`🔄 REORDENANDO: posição ${draggedQueueItem.position + 1} → ${targetPosition + 1}`);
+        reorderQueue(draggedQueueItem.position, targetPosition);
+    }
+    
+    cleanupReorderDrag();
+}
+
+// Limpeza do drag
+function cleanupReorderDrag() {
+    document.querySelectorAll('.dragging, .drag-over').forEach(el => {
+        el.classList.remove('dragging', 'drag-over');
+    });
+    draggedQueueItem = null;
+    console.log('🧹 Drag limpo');
+}
+
+// Adicionar evento global quando documento carrega
+window.startDragReorder = startDragReorder;
+window.allowDrop = allowDrop;
+window.dropReorder = dropReorder;
+
+function handleDragStart(event) {
+    console.log('🚀 DRAG START ATIVADO!', event.target);
+    
+    reorderDraggedElement = {
+        element: event.target,
+        playerId: event.target.dataset.playerId,
+        position: parseInt(event.target.dataset.position),
+        type: event.target.dataset.type
+    };
+    
+    event.target.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    
+    console.log('🚀 Drag iniciado - reordenar fila:', reorderDraggedElement);
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    
+    const targetItem = event.target.closest('.player-item');
+    if (targetItem && targetItem.dataset.type === 'queue' && reorderDraggedElement) {
+        // Remover highlight anterior
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        // Adicionar highlight atual
+        targetItem.classList.add('drag-over');
+    }
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    
+    const targetElement = event.target.closest('.player-item');
+    if (!targetElement || !reorderDraggedElement) return;
+    
+    const targetType = targetElement.dataset.type;
+    const targetPosition = parseInt(targetElement.dataset.position);
+    
+    // Apenas permitir reordenar dentro da fila
+    if (reorderDraggedElement.type !== 'queue' || targetType !== 'queue') {
+        console.log('⚠️ Reordenação apenas permitida dentro da fila');
+        cleanupDrag();
+        return;
+    }
+    
+    if (reorderDraggedElement.position !== targetPosition) {
+        console.log(`🔄 Reordenando fila: posição ${reorderDraggedElement.position + 1} → ${targetPosition + 1}`);
+        reorderQueue(reorderDraggedElement.position, targetPosition);
+    }
+    
+    cleanupDrag();
+}
+
+// Configurar eventos de drag & drop
+function setupDragEvents() {
+    console.log('🔍 DEBUG: Iniciando setupDragEvents...');
+    
+    // Verificar se há elementos dragáveis
+    const allDraggableItems = document.querySelectorAll('.draggable-item');
+    const queueDraggableItems = document.querySelectorAll('.draggable-item[data-type="queue"]');
+    
+    console.log('🔍 DEBUG: Elementos encontrados:', {
+        totalDraggable: allDraggableItems.length,
+        queueDraggable: queueDraggableItems.length,
+        allItems: document.querySelectorAll('.player-item').length
+    });
+    
+    // Log dos elementos encontrados
+    queueDraggableItems.forEach((item, index) => {
+        console.log(`🔍 Item ${index}:`, {
+            id: item.dataset.playerId,
+            position: item.dataset.position,
+            draggable: item.getAttribute('draggable'),
+            hasClass: item.classList.contains('draggable-item')
+        });
+    });
+    
+    // Remover eventos antigos
+    document.querySelectorAll('.draggable-item').forEach(item => {
+        item.removeEventListener('dragstart', handleDragStart);
+        item.removeEventListener('dragover', handleDragOver);
+        item.removeEventListener('drop', handleDrop);
+        item.removeEventListener('dragend', cleanupDrag);
+    });
+    
+    // Adicionar novos eventos apenas para fila
+    queueDraggableItems.forEach((item, index) => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragend', cleanupDrag);
+        
+        console.log(`✅ Eventos adicionados ao item ${index}: ${item.querySelector('.player-name').textContent}`);
+    });
+    
+    console.log(`✅ setupDragEvents concluído: ${queueDraggableItems.length} itens configurados`);
+}
+
+function cleanupDrag() {
+    document.querySelectorAll('.dragging, .drag-over').forEach(el => {
+        el.classList.remove('dragging', 'drag-over');
+    });
+    reorderDraggedElement = null;
+}
+
+// Reordenar fila
+async function reorderQueue(fromIndex, toIndex) {
+    try {
+        console.log(`🔄 Iniciando reordenação: ${fromIndex + 1} → ${toIndex + 1}`);
+        
+        // Verificar se índices são válidos
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= unifiedManagementState.filaLocal.length || toIndex >= unifiedManagementState.filaLocal.length) {
+            console.error('❌ Índices inválidos para reordenação');
+            return;
+        }
+        
+        // Salvar ordem anterior para possível rollback
+        const oldOrder = [...unifiedManagementState.filaLocal];
+        
+        // Mover elemento
+        const [movedPlayer] = unifiedManagementState.filaLocal.splice(fromIndex, 1);
+        unifiedManagementState.filaLocal.splice(toIndex, 0, movedPlayer);
+        
+        // Atualizar posições de todos os jogadores
+        unifiedManagementState.filaLocal.forEach((player, index) => {
+            player.posicao_fila = index + 1;
+        });
+        
+        // Atualizar também no gameState global
+        gameState.queue = [...unifiedManagementState.filaLocal];
+        
+        console.log(`✅ Fila reordenada localmente: ${movedPlayer.jogador?.nome} movido para posição ${toIndex + 1}`);
+        
+        // Recarregar interface imediatamente
+        await loadUnifiedLists();
+        updateCountersAndInterface();
+        
+        // Salvar no banco as novas posições
+        try {
+            console.log('💾 Salvando reordenação no banco...');
+            await salvarOrdemFila();
+            console.log('✅ Reordenação salva no banco com sucesso!');
+        } catch (saveError) {
+            console.warn('⚠️ Erro ao salvar no banco, mantendo ordem local:', saveError);
+            // Mantém a ordem local mesmo se não conseguir salvar
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao reordenar fila:', error);
+        showError('Erro ao reordenar fila');
+        // Recarregar para reverter em caso de erro crítico
+        await loadUnifiedLists();
+    }
+}
+
+// Estado da seleção
+const selectionState = {
+    selectedPlayerId: null,
+    selectedType: null, // 'queue' ou 'reserve'
+    selectedIndex: null
+};
+
+// Selecionar jogador
+function selecionarJogador(playerId, type, index) {
+    console.log('👆 Selecionando jogador:', { playerId, type, index });
+    
+    // Remover seleção anterior
+    document.querySelectorAll('.player-item.selected').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    // Se o mesmo jogador foi clicado, desselecionar
+    if (selectionState.selectedPlayerId === playerId) {
+        selectionState.selectedPlayerId = null;
+        selectionState.selectedType = null;
+        selectionState.selectedIndex = null;
+        atualizarBotaoMover();
+        return;
+    }
+    
+    // Selecionar novo jogador
+    selectionState.selectedPlayerId = playerId;
+    selectionState.selectedType = type;
+    selectionState.selectedIndex = index;
+    
+    // Marcar visualmente
+    const playerElement = document.querySelector(`[data-player-id="${playerId}"][data-type="${type}"]`);
+    if (playerElement) {
+        playerElement.classList.add('selected');
+    }
+    
+    // Atualizar botão
+    atualizarBotaoMover();
+    
+    console.log('✅ Jogador selecionado:', selectionState);
+}
+
+// Atualizar estado do botão mover
+function atualizarBotaoMover() {
+    const btnMover = document.getElementById('btn-mover-jogador');
+    if (!btnMover) return;
+    
+    if (selectionState.selectedPlayerId) {
+        btnMover.disabled = false;
+        
+        const nomeJogador = obterNomeJogadorSelecionado();
+        if (selectionState.selectedType === 'reserve') {
+            // Da reserva para fila - seta aponta para direita (fila)
+            btnMover.innerHTML = `⬅️ ${nomeJogador} CHEGOU`;
+        } else {
+            // Da fila para reserva - seta aponta para esquerda (reserva)  
+            btnMover.innerHTML = `➡️ ${nomeJogador} SAIU`;
+        }
+    } else {
+        btnMover.disabled = true;
+        btnMover.innerHTML = '↔️ Selecione um Jogador';
+    }
+}
+
+// Obter nome do jogador selecionado
+function obterNomeJogadorSelecionado() {
+    if (!selectionState.selectedPlayerId) return '';
+    
+    if (selectionState.selectedType === 'reserve') {
+        const player = unifiedManagementState.reservasLocal.find(p => p.id === selectionState.selectedPlayerId);
+        return player?.nome || player?.nome_usuario || 'Jogador';
+    } else {
+        const player = unifiedManagementState.filaLocal.find(p => p.jogador_id === selectionState.selectedPlayerId);
+        return player?.jogador?.nome || player?.jogador?.nome_usuario || 'Jogador';
+    }
+}
+
+// Executar movimento do jogador selecionado
+async function moverJogadorSelecionado() {
+    if (!selectionState.selectedPlayerId) {
+        showError('Nenhum jogador selecionado');
+        return;
+    }
+    
+    console.log('🚀 Executando movimento:', selectionState);
+    
+    try {
+        if (selectionState.selectedType === 'reserve') {
+            await moverReservaParaFila(selectionState.selectedPlayerId);
+        } else {
+            await moverFilaParaReserva(selectionState.selectedPlayerId);
+        }
+        
+        // Limpar seleção após movimento
+        selectionState.selectedPlayerId = null;
+        selectionState.selectedType = null;
+        selectionState.selectedIndex = null;
+        atualizarBotaoMover();
+        
+    } catch (error) {
+        console.error('❌ Erro no movimento:', error);
+        showError(`Erro: ${error.message}`);
+    }
+}
+
+// Mover jogador da reserva para fila
+async function moverReservaParaFila(playerId) {
+    console.log('➡️ Movendo reserva para fila:', playerId);
+    
+    try {
+        // Encontrar jogador na reserva
+        const playerIndex = unifiedManagementState.reservasLocal.findIndex(p => p.id == playerId);
+        if (playerIndex === -1) {
+            showError('Jogador não encontrado na reserva');
+            return;
+        }
+        
+        const player = unifiedManagementState.reservasLocal[playerIndex];
+        console.log('👤 Jogador encontrado:', player);
+        
+        // Remover da reserva
+        unifiedManagementState.reservasLocal.splice(playerIndex, 1);
+        
+        // Criar estrutura para fila
+        const newPosition = unifiedManagementState.filaLocal.length + 1;
+        const filaPlayer = {
+            jogador_id: playerId,
+            posicao_fila: newPosition,
+            status_fila: 'fila',
+            sessao_id: gameState.sessaoAtiva.id,
+            jogador: {
+                id: player.id,
+                nome: player.nome || player.nome_usuario,
+                nome_usuario: player.nome_usuario,
+                nivel_habilidade: player.nivel_habilidade || 3
+            }
+        };
+        
+        // Adicionar à fila
+        unifiedManagementState.filaLocal.push(filaPlayer);
+        
+        console.log('📋 Estrutura criada:', filaPlayer);
+        
+        // Recarregar listas
+        await loadUnifiedLists();
+        updateCountersAndInterface();
+        
+        // Salvar no banco
+        await adicionarJogadorFila(gameState.sessaoAtiva.id, playerId, newPosition);
+        
+        // Atualizar gameState global
+        await updateGlobalGameState();
+        
+        showSuccess(`✅ ${player.nome || player.nome_usuario} adicionado à fila!`);
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        showError(`Erro ao mover jogador: ${error.message}`);
+        // Recarregar para reverter mudanças
+        await loadUnifiedLists();
+    }
+}
+
+// Mover jogador da fila para reserva
+async function moverFilaParaReserva(playerId) {
+    console.log('⬅️ Movendo fila para reserva:', playerId);
+    
+    try {
+        // Encontrar jogador na fila
+        const playerIndex = unifiedManagementState.filaLocal.findIndex(p => p.jogador_id == playerId);
+        if (playerIndex === -1) {
+            showError('Jogador não encontrado na fila');
+            return;
+        }
+        
+        const player = unifiedManagementState.filaLocal[playerIndex];
+        console.log('👤 Jogador encontrado:', player);
+        
+        // Remover da fila
+        unifiedManagementState.filaLocal.splice(playerIndex, 1);
+        
+        // Atualizar posições dos jogadores restantes
+        unifiedManagementState.filaLocal.forEach((p, index) => {
+            p.posicao_fila = index + 1;
+        });
+        
+        // Criar estrutura para reserva
+        const reservaPlayer = {
+            id: player.jogador.id,
+            nome: player.jogador.nome,
+            nome_usuario: player.jogador.nome_usuario,
+            nivel_habilidade: player.jogador.nivel_habilidade || 3,
+            sessao_id: gameState.sessaoAtiva.id
+        };
+        
+        // Adicionar às reservas
+        unifiedManagementState.reservasLocal.push(reservaPlayer);
+        
+        console.log('📋 Estrutura criada:', reservaPlayer);
+        
+        // Recarregar listas
+        await loadUnifiedLists();
+        updateCountersAndInterface();
+        
+        // Salvar no banco
+        await removerJogadorFila(gameState.sessaoAtiva.id, playerId);
+        
+        // Atualizar gameState global
+        await updateGlobalGameState();
+        
+        showSuccess(`✅ ${player.jogador.nome} movido para reserva!`);
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        showError(`Erro ao mover jogador: ${error.message}`);
+        // Recarregar para reverter mudanças
+        await loadUnifiedLists();
+    }
+}
+
+// Funções auxiliares
+function showSuccess(message) {
+    console.log('✅', message);
+    alert(message); // Substituir por toast/notification depois
+}
+
+function showError(message) {
+    console.error('❌', message);
+    alert('Erro: ' + message); // Substituir por toast/notification depois
+}
+
+// Atualizar gameState global
+async function updateGlobalGameState() {
+    try {
+        console.log('🔄 Atualizando gameState global...');
+        await loadGameState();
+        await renderGameInterface();
+        
+        // Sincronizar estado local
+        unifiedManagementState.originalQueue = [...(gameState.queue || [])];
+        unifiedManagementState.originalReserves = [...(gameState.reserves || [])];
+        unifiedManagementState.filaLocal = [...(gameState.queue || [])];
+        unifiedManagementState.reservasLocal = [...(gameState.reserves || [])];
+        
+        console.log('✅ GameState atualizado!');
+    } catch (error) {
+        console.error('❌ Erro ao atualizar gameState:', error);
+    }
+}
 async function renderDragPlayersList(players, type) {
     if (!players || players.length === 0) {
         return `<div class="drop-zone">
@@ -3345,54 +3863,55 @@ async function handleDrop(e) {
     }
 }
 
-// Operações de movimentação
-async function reorderQueue(fromIndex, toIndex) {
-    // Salvar ordem anterior para desfazer
-    const oldOrder = [...unifiedManagementState.filaLocal];
-    
-    // Remover jogador da posição original
-    const [movedPlayer] = unifiedManagementState.filaLocal.splice(fromIndex, 1);
-    
-    // Inserir na nova posição
-    unifiedManagementState.filaLocal.splice(toIndex, 0, movedPlayer);
-    
-    // Registrar mudança para desfazer
-    unifiedManagementState.changes.push({
-        type: 'reorder',
-        oldOrder: oldOrder,
-        newOrder: [...unifiedManagementState.filaLocal],
-        description: `Moveu ${movedPlayer.jogador?.nome || movedPlayer.nome} da posição ${fromIndex + 1} para ${toIndex + 1}`
-    });
-    
-    // Recarregar listas
-    await reloadListsAfterChange();
-    
-    console.log(`✅ Fila reordenada: ${movedPlayer.jogador?.nome || movedPlayer.nome} movido para posição ${toIndex + 1}`);
-}
-
 async function movePlayerReserveToQueue(player) {
     const playerId = player.jogador_id || player.id;
+    
+    console.log('🔄 Movendo jogador da reserva para fila:', {
+        player: player,
+        playerId: playerId,
+        nome: player.jogador?.nome || player.nome
+    });
     
     // Remover da reserva local
     unifiedManagementState.reservasLocal = unifiedManagementState.reservasLocal
         .filter(p => (p.jogador_id || p.id) !== playerId);
     
-    // Adicionar à fila local
+    // Adicionar à fila local no final
+    const newPosition = unifiedManagementState.filaLocal.length;
     unifiedManagementState.filaLocal.push(player);
     
-    // Registrar mudança
-    unifiedManagementState.changes.push({
-        type: 'add_to_queue',
-        player: player,
-        position: unifiedManagementState.filaLocal.length - 1
-    });
+    console.log(`📋 Jogador adicionado à fila na posição ${newPosition + 1}`);
     
     // Recarregar listas
     await reloadListsAfterChange();
+    
+    // Auto-salvar a mudança imediatamente
+    console.log('💾 Tentando auto-salvar mudança...');
+    try {
+        await adicionarJogadorFila(
+            gameState.sessaoAtiva.id,
+            playerId,
+            newPosition + 1
+        );
+        
+        console.log('✅ Mudança salva automaticamente!');
+        showSuccess(`✅ ${player.jogador?.nome || player.nome} adicionado à fila!`);
+        
+    } catch (error) {
+        console.error('❌ Erro no auto-save:', error);
+        console.log('⚠️ Mudança mantida para salvamento manual');
+        showError('Erro ao salvar. Use o botão "Aplicar" para tentar novamente.');
+    }
 }
 
 async function movePlayerQueueToReserve(player) {
     const playerId = player.jogador_id || player.id;
+    
+    console.log('🔄 Movendo jogador da fila para reserva:', {
+        player: player,
+        playerId: playerId,
+        nome: player.jogador?.nome || player.nome
+    });
     
     // Encontrar posição na fila
     const oldPosition = unifiedManagementState.filaLocal.findIndex(
@@ -3406,15 +3925,27 @@ async function movePlayerQueueToReserve(player) {
     // Adicionar às reservas locais
     unifiedManagementState.reservasLocal.push(player);
     
-    // Registrar mudança
-    unifiedManagementState.changes.push({
-        type: 'remove_from_queue',
-        player: player,
-        oldPosition: oldPosition
-    });
+    console.log(`📋 Jogador removido da fila (posição ${oldPosition + 1}) e adicionado às reservas`);
     
     // Recarregar listas
     await reloadListsAfterChange();
+    
+    // Auto-salvar a mudança imediatamente
+    console.log('💾 Tentando auto-salvar remoção...');
+    try {
+        await removerJogadorFila(
+            gameState.sessaoAtiva.id,
+            playerId
+        );
+        
+        console.log('✅ Remoção salva automaticamente!');
+        showSuccess(`✅ ${player.jogador?.nome || player.nome} movido para reserva!`);
+        
+    } catch (error) {
+        console.error('❌ Erro no auto-save da remoção:', error);
+        console.log('⚠️ Mudança mantida para salvamento manual');
+        showError('Erro ao salvar. Use o botão "Aplicar" para tentar novamente.');
+    }
 }
 
 // Recarregar listas após mudanças
@@ -3433,34 +3964,6 @@ function updateCountersAndInterface() {
     
     if (reservesCount) reservesCount.textContent = `(${unifiedManagementState.reservasLocal.length})`;
     if (queueCount) queueCount.textContent = `(${unifiedManagementState.filaLocal.length})`;
-    
-    updateActionButtons();
-}
-
-// Atualizar botões de ação
-function updateActionButtons() {
-    const btnAplicar = document.querySelector('.btn-aplicar');
-    const btnDesfazer = document.querySelector('.btn-desfazer');
-    
-    const hasChanges = unifiedManagementState.changes.length > 0;
-    
-    // Atualizar botão aplicar
-    if (btnAplicar) {
-        btnAplicar.disabled = !hasChanges;
-        btnAplicar.innerHTML = hasChanges 
-            ? `✅ Aplicar (${unifiedManagementState.changes.length})` 
-            : '✅ Aplicar';
-    }
-    
-    // Atualizar botão desfazer
-    if (btnDesfazer) {
-        btnDesfazer.disabled = !hasChanges;
-    }
-    
-    console.log('✅ Botões atualizados:', {
-        hasChanges,
-        changesCount: unifiedManagementState.changes.length
-    });
 }
 
 // Utilitários
@@ -3557,58 +4060,6 @@ async function applyAllChanges() {
 // =============================================
 
 // Desfazer última ação
-async function desfazerUltimaAcao() {
-    if (unifiedManagementState.changes.length === 0) {
-        showError('Nenhuma ação para desfazer.');
-        return;
-    }
-
-    const ultimaAcao = unifiedManagementState.changes.pop();
-    
-    try {
-        // Reverter a ação dependendo do tipo
-        switch(ultimaAcao.type) {
-            case 'add_to_queue':
-                // Remover da fila e voltar para reservas
-                unifiedManagementState.filaLocal = unifiedManagementState.filaLocal.filter(
-                    p => (p.jogador_id || p.id) !== (ultimaAcao.player.jogador_id || ultimaAcao.player.id)
-                );
-                unifiedManagementState.reservasLocal.push(ultimaAcao.player);
-                break;
-                
-            case 'remove_from_queue':
-                // Voltar para a fila na posição original
-                unifiedManagementState.filaLocal.splice(ultimaAcao.oldPosition, 0, ultimaAcao.player);
-                unifiedManagementState.reservasLocal = unifiedManagementState.reservasLocal.filter(
-                    p => (p.jogador_id || p.id) !== (ultimaAcao.player.jogador_id || ultimaAcao.player.id)
-                );
-                break;
-                
-            case 'reorder':
-                // Restaurar ordem anterior
-                unifiedManagementState.filaLocal = ultimaAcao.oldOrder;
-                break;
-        }
-
-        // Recarregar listas
-        await reloadListsAfterChange();
-        
-        // Atualizar botão desfazer
-        const btnDesfazer = document.querySelector('.btn-desfazer');
-        if (btnDesfazer) {
-            btnDesfazer.disabled = unifiedManagementState.changes.length === 0;
-        }
-        
-        console.log('✅ Ação desfeita:', ultimaAcao);
-        
-    } catch (error) {
-        console.error('Erro ao desfazer ação:', error);
-        showError('Erro ao desfazer ação.');
-        // Restaurar a ação se houve erro
-        unifiedManagementState.changes.push(ultimaAcao);
-    }
-}
-
 // Limpar toda a fila
 async function limparFila() {
     if (unifiedManagementState.filaLocal.length === 0) {
@@ -3623,12 +4074,6 @@ async function limparFila() {
     try {
         // Mover todos da fila para reservas
         const jogadoresDaFila = [...unifiedManagementState.filaLocal];
-        
-        // Registrar mudança para desfazer
-        unifiedManagementState.changes.push({
-            type: 'clear_queue',
-            oldQueue: jogadoresDaFila
-        });
         
         // Limpar fila local
         unifiedManagementState.filaLocal = [];
@@ -3656,113 +4101,23 @@ async function limparFila() {
 }
 
 // Aplicar todas as alterações
-async function aplicarAlteracoes() {
-    if (unifiedManagementState.changes.length === 0) {
-        showError('Nenhuma alteração para aplicar.');
-        return;
-    }
 
-    const btnAplicar = document.querySelector('.btn-aplicar');
-    if (btnAplicar) {
-        btnAplicar.disabled = true;
-        btnAplicar.innerHTML = '⏳ Aplicando...';
-    }
-
-    try {
-        // Aplicar mudanças na ordem correta
-        for (const change of unifiedManagementState.changes) {
-            switch(change.type) {
-                case 'add_to_queue':
-                    await adicionarJogadorNaFila(
-                        change.player.jogador_id || change.player.id,
-                        change.position
-                    );
-                    break;
-                    
-                case 'remove_from_queue':
-                    await removerJogadorDaFila(
-                        change.player.jogador_id || change.player.id
-                    );
-                    break;
-                    
-                case 'reorder':
-                    // Aplicar nova ordem
-                    for (let i = 0; i < change.newOrder.length; i++) {
-                        await atualizarPosicaoFila(
-                            gameState.sessaoAtiva.id,
-                            change.newOrder[i].jogador_id || change.newOrder[i].id,
-                            i + 1
-                        );
-                    }
-                    break;
-                    
-                case 'clear_queue':
-                    // Limpar fila completamente
-                    const filaAtual = await obterFila();
-                    for (const jogador of filaAtual) {
-                        await removerJogadorDaFila(
-                            jogador.jogador_id || jogador.id
-                        );
-                    }
-                    break;
-            }
-        }
-        
-        // Limpar mudanças aplicadas
-        unifiedManagementState.changes = [];
-        
-        // Forçar invalidação de cache para garantir dados atuais
-        forceInvalidateCache();
-        
-        // Atualizar estado global e interface
-        await loadGameState();
-        await renderGameInterface();
-        
-        // Recarregar especificamente a fila principal
-        await carregarFila();
-        await carregarReservas();
-        
-        // Fechar modal
-        fecharGerenciamentoUnificado();
-        
-        showSuccess('✅ Alterações aplicadas com sucesso!');
-        
-    } catch (error) {
-        console.error('Erro ao aplicar alterações:', error);
-        showError('Erro ao aplicar alterações. Tente novamente.');
-    } finally {
-        if (btnAplicar) {
-            btnAplicar.disabled = false;
-            btnAplicar.innerHTML = '✅ Aplicar';
-        }
-    }
-}
 
 // Fechar modal de gerenciamento unificado
 async function fecharGerenciamentoUnificado() {
+    console.log('🔄 Fechando modal de gerenciamento...');
     const modal = document.getElementById('gerenciamento-modal');
     if (modal) {
         modal.classList.remove('active');
         modal.style.display = 'none';
         
-        // Limpar estado local se não há mudanças pendentes
-        if (unifiedManagementState.changes.length === 0) {
-            unifiedManagementState.reservasLocal = [];
-            unifiedManagementState.filaLocal = [];
-        }
+        // Limpar estado local
+        unifiedManagementState.reservasLocal = [];
+        unifiedManagementState.filaLocal = [];
         
-        // Sempre atualizar a interface principal ao fechar
-        console.log('🔄 Atualizando interface principal após fechar modal...');
-        try {
-            // Forçar invalidação de cache para garantir dados atuais
-            forceInvalidateCache();
-            
-            await loadGameState();
-            await renderGameInterface();
-            console.log('✅ Interface principal atualizada');
-        } catch (error) {
-            console.error('❌ Erro ao atualizar interface:', error);
-        }
+        console.log('✅ Recarregando página para atualizar visualização...');
+        // Recarregar a página para garantir visualização das mudanças
+        window.location.reload();
     }
 }
 

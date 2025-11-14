@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Sorteio Mobile - Nomes Longos</title>
+    <link rel="stylesheet" href="sorteio.css">
+    <style>
+        /* Override para teste */
+        body {
+            background: #f0f0f0;
+            padding: 10px;
+        }
+        
+        .test-info {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #e74c3c;
+        }
+        
+        .test-info h3 {
+            color: #e74c3c;
+            margin: 0 0 10px 0;
+        }
+        
+        .test-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h3>🧪 TESTE MOBILE - NOMES LONGOS</h3>
+        <p><strong>Problema:</strong> Nomes excedendo container</p>
+        <p><strong>Solução:</strong> text-overflow: ellipsis + max-width</p>
+        <p><strong>Viewport:</strong> Mobile (375px)</p>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Header com Título e Controles -->
+            <section class="header-card">
+                <h2>🎲 Sorteio Mobile Test</h2>
+                <div class="controls-row">
+                    <button class="btn-toggle active">
+                        <span class="emoji">⭐</span>
+                        <span>Mostrar Estrelas</span>
+                    </button>
+                </div>
+                <div class="selected-info">
+                    <span>Teste com nomes muito longos</span>
+                </div>
+            </section>
+
+            <!-- Lista de Jogadores com Nomes Longos -->
+            <section class="players-card">
+                <div class="players-list">
+                    <!-- Nomes normais -->
+                    <button class="player-button">
+                        <span class="player-name">Adriano</span>
+                        <span class="player-stars">⭐⭐⭐</span>
+                    </button>
+                    
+                    <button class="player-button">
+                        <span class="player-name">Alan</span>
+                        <span class="player-stars">⭐⭐⭐⭐</span>
+                    </button>
+                    
+                    <!-- Nomes longos do usuário -->
+                    <button class="player-button">
+                        <span class="player-name">Douglas Castro</span>
+                        <span class="player-stars">⭐⭐⭐⭐⭐</span>
+                    </button>
+                    
+                    <button class="player-button">
+                        <span class="player-name">Gabriel Abreu</span>
+                        <span class="player-stars">⭐⭐⭐</span>
+                    </button>
+                    
+                    <button class="player-button">
+                        <span class="player-name">Gabriel Lima</span>
+                        <span class="player-stars">⭐⭐⭐⭐</span>
+                    </button>
+                    
+                    <button class="player-button">
+                        <span class="player-name">Gustavo e João</span>
+                        <span class="player-stars">⭐⭐⭐⭐⭐</span>
+                    </button>
+                    
+                    <!-- Nomes ainda mais longos para teste extremo -->
+                    <button class="player-button">
+                        <span class="player-name">Nome Muito Longo Teste</span>
+                        <span class="player-stars">⭐⭐⭐</span>
+                    </button>
+                    
+                    <button class="player-button">
+                        <span class="player-name">Francisco de Assis</span>
+                        <span class="player-stars">⭐⭐⭐⭐⭐</span>
+                    </button>
+                    
+                    <button class="player-button">
+                        <span class="player-name">João Pedro Silva</span>
+                        <span class="player-stars">⭐⭐⭐</span>
+                    </button>
+                    
+                    <button class="player-button">
+                        <span class="player-name">Nome Extremamente Longo Para Teste</span>
+                        <span class="player-stars">⭐⭐⭐⭐</span>
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        // Test functionality
+        document.querySelectorAll('.player-button').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('selected');
+            });
+        });
+    </script>
+</body>
+</html>
