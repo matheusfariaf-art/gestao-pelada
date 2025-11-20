@@ -274,15 +274,14 @@ body {
     margin-bottom: 24px;
     align-items: start;
     justify-content: center;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* Centralizar quando há número ímpar de times */
 .teams-container .team-card:last-child:nth-child(odd) {
     grid-column: 1 / -1;
-    max-width: 180px;
+    max-width: 50%;
     justify-self: center;
 }
 
@@ -292,8 +291,7 @@ body {
     border-radius: 16px;
     padding: 16px;
     width: 100%;
-    max-width: 180px;
-    justify-self: center;
+    min-width: 0;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
     transition: all 0.2s ease;
 }
@@ -649,13 +647,14 @@ body {
 
     /* Times resultados mobile */
     .teams-container {
-        grid-template-columns: 1fr;
-        gap: 15px;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
     }
 
     .team-card {
         margin: 0;
-        padding: 15px;
+        padding: 12px;
+        font-size: 0.9rem;
     }
 
     .team-header h3 {

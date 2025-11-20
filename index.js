@@ -2,9 +2,148 @@
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
+    await carregarDashboard();
     await carregarStatusPelada();
     await carregarUltimosJogos();
 });
+
+// Carrega dashboard principal
+async function carregarDashboard() {
+    try {
+        // Verificar se o cliente Supabase está disponível
+        if (!client) {
+            console.error('Cliente Supabase não disponível');
+            return;
+        }
+        
+        // Elementos das métricas
+        const totalPeladasEl = document.getElementById('total-peladas');
+        const totalGolsEl = document.getElementById('total-gols');
+        const totalPeladeirosEl = document.getElementById('total-peladeiros');
+        const btnAcaoPrincipal = document.getElementById('btn-acao-principal');
+        
+        if (!totalPeladasEl) return;
+        
+        console.log('🔄 Carregando métricas do dashboard...');
+        
+        // Buscar total de peladas (sessões no histórico)
+        try {
+            console.log('📊 Buscando total de peladas...');
+            const { data: sessoes, error } = await client
+                .from('sessoes')
+                .select('id');
+            
+            if (error) {
+                console.error('❌ Erro ao buscar sessões:', error);
+                throw error;
+            }
+            
+            const totalPeladas = sessoes ? sessoes.length : 0;
+            console.log('📅 Total de peladas encontradas:', totalPeladas);
+            
+            if (totalPeladasEl) {
+                totalPeladasEl.textContent = totalPeladas;
+            }
+        } catch (error) {
+            console.error('Erro ao buscar peladas:', error);
+            if (totalPeladasEl) totalPeladasEl.textContent = 'Erro';
+        }
+        
+        // Buscar total de gols
+        try {
+            console.log('⚽ Buscando total de gols...');
+            const { data: jogos, error } = await client
+                .from('jogos')
+                .select('placar_a, placar_b')
+                .eq('status', 'finalizado');
+            
+            if (error) {
+                console.error('❌ Erro ao buscar jogos:', error);
+                throw error;
+            }
+            
+            let totalGols = 0;
+            if (jogos && jogos.length > 0) {
+                totalGols = jogos.reduce((total, jogo) => {
+                    return total + (jogo.placar_a || 0) + (jogo.placar_b || 0);
+                }, 0);
+            }
+            
+            console.log('🎯 Total de gols encontrados:', totalGols, 'de', jogos ? jogos.length : 0, 'jogos');
+            
+            if (totalGolsEl) {
+                totalGolsEl.textContent = totalGols;
+            }
+        } catch (error) {
+            console.error('Erro ao buscar gols:', error);
+            if (totalGolsEl) totalGolsEl.textContent = 'Erro';
+        }
+        
+        // Buscar total de peladeiros cadastrados
+        try {
+            console.log('👥 Buscando total de peladeiros...');
+            const { data: jogadores, error } = await client
+                .from('jogadores')
+                .select('id');
+            
+            if (error) {
+                console.error('❌ Erro ao buscar jogadores:', error);
+                throw error;
+            }
+            
+            const totalPeladeiros = jogadores ? jogadores.length : 0;
+            console.log('🏃‍♂️ Total de peladeiros encontrados:', totalPeladeiros);
+            
+            if (totalPeladeirosEl) {
+                totalPeladeirosEl.textContent = totalPeladeiros;
+            }
+        } catch (error) {
+            console.error('Erro ao buscar peladeiros:', error);
+            if (totalPeladeirosEl) totalPeladeirosEl.textContent = 'Erro';
+        }
+        
+        // Configurar botão de ação principal baseado no status da sessão atual
+        if (btnAcaoPrincipal) {
+            const resultadoSessao = await Database.buscarSessaoAtiva();
+            const sessaoAtiva = resultadoSessao?.data || resultadoSessao;
+            
+            if (sessaoAtiva) {
+                // Verificar se há jogo ativo
+                const resultadoJogo = await Database.buscarJogoAtivo(sessaoAtiva.id);
+                const jogoAtivo = resultadoJogo?.data || resultadoJogo;
+                
+                if (jogoAtivo) {
+                    btnAcaoPrincipal.innerHTML = '<span class="btn-icon">🎮</span><span>Ver Partida</span>';
+                    btnAcaoPrincipal.onclick = () => irPara('partida.html');
+                } else {
+                    // Verificar quantos jogadores na fila
+                    const resultadoFila = await Database.buscarFilaPorSessao(sessaoAtiva.id);
+                    const fila = resultadoFila?.data || resultadoFila;
+                    const jogadoresNaFila = fila ? fila.filter(j => j.status === 'fila').length : 0;
+                    
+                    if (jogadoresNaFila >= 12) {
+                        btnAcaoPrincipal.innerHTML = '<span class="btn-icon">▶️</span><span>Iniciar Jogo</span>';
+                        btnAcaoPrincipal.onclick = iniciarJogo;
+                    } else {
+                        btnAcaoPrincipal.innerHTML = '<span class="btn-icon">👥</span><span>Ver Fila</span>';
+                        btnAcaoPrincipal.onclick = () => irPara('fila.html');
+                    }
+                }
+            } else {
+                btnAcaoPrincipal.innerHTML = '<span class="btn-icon">🎲</span><span>Fazer Sorteio</span>';
+                btnAcaoPrincipal.onclick = () => irPara('sorteio.html');
+            }
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar dashboard:', error);
+    }
+}
+
+// Ação principal dinâmica
+function acaoPrincipal() {
+    // Implementada dinamicamente no carregarDashboard
+}
 
 // Funções de navegação
 function irPara(pagina) {
@@ -217,4 +356,7 @@ function formatarTempo(segundos) {
 }
 
 // Atualizar página automaticamente
-setInterval(carregarStatusPelada, 30000); // A cada 30 segundos
+setInterval(async () => {
+    await carregarDashboard();
+    await carregarStatusPelada();
+}, 15000); // A cada 15 segundos
