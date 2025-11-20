@@ -40,6 +40,49 @@ body {
     border: 1px solid #f0f0f0;
 }
 
+/* Novas seções de prioridade */
+.priority-section {
+    margin: 20px 0;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border-left: 4px solid #2d8f2d;
+}
+
+.priority-section h4 {
+    margin-bottom: 12px;
+    color: #2d8f2d;
+    font-size: 1.1em;
+}
+
+.combo-grid {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.combo-item {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #495057;
+    transition: all 0.2s ease;
+}
+
+.combo-item:hover {
+    background: #e8f5e8;
+    border-color: #2d8f2d;
+    transform: translateY(-1px);
+}
+
+.combo-item strong {
+    color: #2d8f2d;
+    margin-right: 8px;
+}
+
 /* Header Card */
 .header-card {
     text-align: center;

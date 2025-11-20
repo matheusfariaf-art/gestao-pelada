@@ -101,6 +101,134 @@ async function carregarDashboard() {
             console.error('Erro ao buscar peladeiros:', error);
             if (totalPeladeirosEl) totalPeladeirosEl.textContent = 'Erro';
         }
+
+        // Buscar total de partidas (jogos finalizados)
+        try {
+            console.log('🏆 Buscando total de partidas...');
+            const totalPartidasEl = document.getElementById('total-partidas');
+            
+            const { data: partidas, error } = await client
+                .from('jogos')
+                .select('id')
+                .eq('status', 'finalizado');
+            
+            if (error) {
+                console.error('❌ Erro ao buscar partidas:', error);
+                throw error;
+            }
+            
+            const totalPartidas = partidas ? partidas.length : 0;
+            console.log('🎮 Total de partidas encontradas:', totalPartidas);
+            
+            if (totalPartidasEl) {
+                totalPartidasEl.textContent = totalPartidas;
+            }
+        } catch (error) {
+            console.error('Erro ao buscar partidas:', error);
+            const totalPartidasEl = document.getElementById('total-partidas');
+            if (totalPartidasEl) totalPartidasEl.textContent = 'Erro';
+        }
+
+        // Calcular média de gols por partida
+        try {
+            console.log('📊 Calculando média de gols...');
+            const mediaGolsEl = document.getElementById('media-gols');
+            
+            const { data: jogosFinalizados, error } = await client
+                .from('jogos')
+                .select('placar_a, placar_b')
+                .eq('status', 'finalizado');
+            
+            if (error) {
+                console.error('❌ Erro ao buscar jogos para média:', error);
+                throw error;
+            }
+            
+            let mediaGols = 0;
+            if (jogosFinalizados && jogosFinalizados.length > 0) {
+                const totalGolsPartidas = jogosFinalizados.reduce((total, jogo) => {
+                    return total + (jogo.placar_a || 0) + (jogo.placar_b || 0);
+                }, 0);
+                mediaGols = totalGolsPartidas / jogosFinalizados.length;
+            }
+            
+            console.log('⚽ Média de gols calculada:', mediaGols.toFixed(1));
+            
+            if (mediaGolsEl) {
+                mediaGolsEl.textContent = mediaGols.toFixed(1);
+            }
+        } catch (error) {
+            console.error('Erro ao calcular média de gols:', error);
+            const mediaGolsEl = document.getElementById('media-gols');
+            if (mediaGolsEl) mediaGolsEl.textContent = 'Erro';
+        }
+
+        // Buscar Rei da Pelada (jogador com mais gols)
+        try {
+            console.log('👑 Buscando Rei da Pelada...');
+            const reiPeladaEl = document.getElementById('rei-pelada');
+            
+            // Primeiro, buscar todos os gols
+            const { data: gols, error: errorGols } = await client
+                .from('gols')
+                .select('jogador_id');
+            
+            if (errorGols) {
+                console.error('❌ Erro ao buscar gols:', errorGols);
+                throw errorGols;
+            }
+            
+            let reiDaPelada = '-';
+            if (gols && gols.length > 0) {
+                // Contar gols por jogador
+                const golsPorJogador = {};
+                gols.forEach(gol => {
+                    if (gol.jogador_id) {
+                        golsPorJogador[gol.jogador_id] = (golsPorJogador[gol.jogador_id] || 0) + 1;
+                    }
+                });
+                
+                // Encontrar jogador com mais gols
+                let maxGols = 0;
+                let jogadorComMaisGolsId = null;
+                
+                for (const [jogadorId, totalGols] of Object.entries(golsPorJogador)) {
+                    if (totalGols > maxGols) {
+                        maxGols = totalGols;
+                        jogadorComMaisGolsId = jogadorId;
+                    }
+                }
+                
+                // Se encontrou um jogador com gols, buscar o nome dele
+                if (jogadorComMaisGolsId && maxGols > 0) {
+                    const { data: jogador, error: errorJogador } = await client
+                        .from('jogadores')
+                        .select('nome')
+                        .eq('id', jogadorComMaisGolsId)
+                        .single();
+                    
+                    if (!errorJogador && jogador) {
+                        reiDaPelada = jogador.nome;
+                        console.log('👑 Rei da Pelada encontrado:', reiDaPelada, 'com', maxGols, 'gols');
+                    } else {
+                        console.log('👑 Jogador com mais gols encontrado, mas erro ao buscar nome');
+                        reiDaPelada = `Jogador #${jogadorComMaisGolsId}`;
+                    }
+                } else {
+                    console.log('👑 Nenhum rei da pelada ainda (sem gols registrados)');
+                }
+            } else {
+                console.log('👑 Nenhum gol registrado ainda');
+            }
+            
+            if (reiPeladaEl) {
+                reiPeladaEl.textContent = reiDaPelada;
+            }
+        } catch (error) {
+            console.error('Erro ao buscar rei da pelada:', error);
+            const reiPeladaEl = document.getElementById('rei-pelada');
+            if (reiPeladaEl) reiPeladaEl.textContent = 'Erro';
+        }
         
         // Configurar botão de ação principal baseado no status da sessão atual
         if (btnAcaoPrincipal) {

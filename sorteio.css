@@ -46,13 +46,14 @@ body {
     text-align: center;
     background: #f8f9fa;
     border: 2px solid #f0f0f0;
+    padding: 12px 20px; /* Ainda mais reduzido: 16px → 12px vertical, 24px → 20px horizontal */
 }
 
 .header-card h2 {
-    font-size: 1.3rem;
+    font-size: 1.1rem; /* Reduzido de 1.2rem para 1.1rem */
     font-weight: 600;
     color: #333;
-    margin: 0 0 16px 0;
+    margin: 0 0 8px 0; /* Reduzido de 12px para 8px */
 }
 
 /* Configuração de Times - removida */
@@ -68,7 +69,7 @@ body {
 .controls-row {
     display: flex;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 8px; /* Reduzido de 16px para 8px */
     justify-content: center;
 }
 
@@ -114,16 +115,16 @@ body {
 .player-button {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
+    justify-content: center; /* Centralizado já que só tem o nome */
+    padding: 10px 14px; /* Reduzido de 12px para 10px vertical */
     background: #f8f9fa;
     border: 2px solid #f0f0f0;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 0.9rem;
-    text-align: left;
-    min-height: 48px;
+    text-align: center; /* Centralizado */
+    min-height: 40px; /* Reduzido de 48px para 40px */
 }
 
 .player-button:hover {
@@ -138,29 +139,15 @@ body {
     color: white;
 }
 
-.player-button.selected .player-stars {
-    filter: brightness(1.2);
-}
-
 .player-name {
     font-weight: 500;
-    flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: calc(100% - 30px); /* Reserva espaço para as estrelas */
-    min-width: 0; /* Permite que o flex item encolha */
+    width: 100%; /* Usa toda a largura disponível */
 }
 
-.player-stars {
-    font-size: 0.8rem;
-    margin-left: 8px;
-    flex-shrink: 0;
-}
 
-.player-stars.hidden {
-    display: none;
-}
 
 .selected-info {
     text-align: center;
@@ -362,6 +349,26 @@ body {
     align-items: center;
     padding: 20px 0;
     margin-top: 8px;
+}
+
+/* Botão Confirmar Times - Sticky igual ao botão de sortear */
+@media (max-width: 480px) {
+    .result-actions {
+        position: sticky;
+        bottom: 80px;
+        z-index: 999;
+        margin: 10px 5px;
+        padding: 12px;
+        background: #fff;
+        border-radius: 15px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f0f0f0;
+    }
+    
+    .result-actions .btn-success {
+        width: 100%;
+        margin: 0;
+    }
 }
 
 /* Footer Mobile */
@@ -637,13 +644,7 @@ body {
         padding: 0;
     }
 
-    /* Stars mobile */
-    .player-stars {
-        font-size: 0.7rem;
-        margin-left: 0;
-        margin-top: 2px;
-        align-self: flex-end;
-    }
+    /* Estilos das estrelas removidos */
 
     /* Times resultados mobile */
     .teams-container {
