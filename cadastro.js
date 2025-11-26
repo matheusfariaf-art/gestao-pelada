@@ -1,11 +1,88 @@
 // JavaScript para a página de Cadastro
 
+// Variável para controle de permissão
+let isAdmin = false;
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
+    verificarPermissaoAdmin();
     await carregarJogadores();
     configurarFormulario();
     configurarSlider();
 });
+
+// Verificar se usuário é administrador
+function verificarPermissaoAdmin() {
+    // Verifica se existe uma senha de admin salva ou se o usuário já foi autenticado
+    const adminAuth = localStorage.getItem('adminAuth');
+    const adminExpiry = localStorage.getItem('adminExpiry');
+    const now = new Date().getTime();
+    
+    if (adminAuth === 'true' && adminExpiry && now < parseInt(adminExpiry)) {
+        isAdmin = true;
+    } else {
+        // Limpar autenticação expirada
+        localStorage.removeItem('adminAuth');
+        localStorage.removeItem('adminExpiry');
+        isAdmin = false;
+    }
+}
+
+// Função para solicitar senha de admin
+async function solicitarSenhaAdmin() {
+    const username = prompt('🔐 Digite o nome de usuário do administrador:');
+    if (!username) return false;
+    
+    const senha = prompt('🔐 Digite a senha:');
+    if (!senha) return false;
+    
+    try {
+        // Buscar usuário admin no banco
+        const resultado = await Database.buscarUsuarioPorUsername(username);
+        
+        if (!resultado.success) {
+            mostrarMensagem('❌ Erro ao verificar credenciais!', 'error');
+            return false;
+        }
+        
+        const usuario = resultado.data;
+        
+        // Verificar se usuário existe e se a senha está correta
+        if (!usuario) {
+            mostrarMensagem('❌ Usuário não encontrado!', 'error');
+            return false;
+        }
+        
+        // Verificar senha (assumindo que está salva em texto plano - em produção seria hash)
+        if (usuario.senha !== senha) {
+            mostrarMensagem('❌ Senha incorreta!', 'error');
+            return false;
+        }
+        
+        // Verificar se é admin (assumindo campo 'tipo' ou 'role')
+        if (usuario.tipo !== 'admin' && usuario.role !== 'admin') {
+            mostrarMensagem('❌ Usuário não tem privilégios de administrador!', 'error');
+            return false;
+        }
+        
+        // Sucesso - conceder acesso admin
+        isAdmin = true;
+        // Salvar autenticação por 1 hora
+        const expiry = new Date().getTime() + (60 * 60 * 1000);
+        localStorage.setItem('adminAuth', 'true');
+        localStorage.setItem('adminExpiry', expiry.toString());
+        localStorage.setItem('adminUser', username);
+        
+        mostrarMensagem(`✅ Bem-vindo, ${usuario.nome || username}!`, 'success');
+        carregarJogadores(); // Recarregar para mostrar botões de delete
+        return true;
+        
+    } catch (error) {
+        console.error('Erro na autenticação:', error);
+        mostrarMensagem('❌ Erro no sistema de autenticação!', 'error');
+        return false;
+    }
+}
 
 // Configurar formulário
 function configurarFormulario() {
@@ -153,12 +230,27 @@ async function carregarJogadores() {
             return;
         }
         
-        lista.innerHTML = jogadores.map(jogador => {
+        // Ordenar jogadores: ativos primeiro, depois inativos
+        const jogadoresOrdenados = jogadores.sort((a, b) => {
+            const statusA = a.status || 'ativo';
+            const statusB = b.status || 'ativo';
+            
+            if (statusA === statusB) {
+                return a.nome.localeCompare(b.nome); // Ordem alfabética dentro do mesmo status
+            }
+            
+            return statusA === 'ativo' ? -1 : 1; // Ativos primeiro
+        });
+        
+        lista.innerHTML = jogadoresOrdenados.map(jogador => {
             const nivel = jogador.nivel_habilidade || 3;
             const estrelas = '⭐'.repeat(nivel) + '☆'.repeat(5 - nivel);
+            const status = jogador.status || 'ativo';
+            const statusEmoji = status === 'ativo' ? '🟢' : '🔴';
+            const isInativo = status === 'inativo';
             
             return `
-                <div class="player-item" data-id="${jogador.id}">
+                <div class="player-item ${isInativo ? 'player-inactive' : ''}" data-id="${jogador.id}">
                     <div class="player-info">
                         <div class="player-name">${jogador.nome}</div>
                         <div class="player-stars">${estrelas}</div>
@@ -167,9 +259,13 @@ async function carregarJogadores() {
                         <button class="btn-action btn-edit" onclick="editarJogador('${jogador.id}')">
                             <span class="emoji">✏️</span>
                         </button>
-                        <button class="btn-action btn-delete" onclick="excluirJogador('${jogador.id}', '${jogador.nome}')">
-                            <span class="emoji">🗑️</span>
+                        <button class="btn-action btn-status" onclick="alternarStatus('${jogador.id}', '${status}')" title="${status === 'ativo' ? 'Desativar jogador' : 'Ativar jogador'}">
+                            <span class="emoji">${statusEmoji}</span>
                         </button>
+                        ${isAdmin ? `
+                        <button class="btn-action btn-delete" onclick="excluirJogador('${jogador.id}', '${jogador.nome}')" title="Excluir jogador (apenas ADM)">
+                            <span class="emoji">🗑️</span>
+                        </button>` : ''}
                     </div>
                 </div>
             `;
@@ -284,9 +380,17 @@ function cancelarEdicao() {
     form.onsubmit = cadastrarJogador;
 }
 
-// Excluir jogador
+// Excluir jogador (apenas para administradores)
 async function excluirJogador(id, nome) {
-    if (!confirm(`🗑️ Tem certeza que deseja excluir "${nome}"?`)) {
+    // Verificar se é admin
+    if (!isAdmin) {
+        const senhaCorreta = await solicitarSenhaAdmin();
+        if (!senhaCorreta) {
+            return;
+        }
+    }
+    
+    if (!confirm(`🗑️ Tem certeza que deseja EXCLUIR PERMANENTEMENTE "${nome}"?\n\n⚠️ Esta ação não pode ser desfeita!`)) {
         return;
     }
     
@@ -297,11 +401,48 @@ async function excluirJogador(id, nome) {
             throw new Error(resultado.error);
         }
         
-        mostrarMensagem('✅ Jogador excluído com sucesso!', 'success');
+        mostrarMensagem('✅ Jogador excluído permanentemente!', 'success');
         await carregarJogadores();
         
     } catch (error) {
         console.error('Erro ao excluir:', error);
+        mostrarMensagem(`❌ ${error.message}`, 'error');
+    }
+}
+
+// Alternar status do jogador (ativo/inativo)
+async function alternarStatus(id, statusAtual) {
+    try {
+        const novoStatus = statusAtual === 'ativo' ? 'inativo' : 'ativo';
+        const emoji = novoStatus === 'ativo' ? '🟢' : '🔴';
+        const acao = novoStatus === 'ativo' ? 'ativado' : 'desativado';
+        
+        // Buscar dados do jogador para pegar o nome
+        const { data: jogadores } = await Database.buscarJogadores();
+        const jogador = jogadores.find(j => j.id === id);
+        
+        if (!jogador) {
+            throw new Error('Jogador não encontrado');
+        }
+        
+        // Confirmar alteração
+        const confirmacao = confirm(`${emoji} Deseja ${novoStatus === 'ativo' ? 'ativar' : 'desativar'} "${jogador.nome}"?`);
+        if (!confirmacao) {
+            return;
+        }
+        
+        // Atualizar status no banco
+        const resultado = await Database.atualizarJogador(id, { status: novoStatus });
+        
+        if (!resultado.success) {
+            throw new Error(resultado.error);
+        }
+        
+        mostrarMensagem(`${emoji} Jogador ${acao} com sucesso!`, 'success');
+        await carregarJogadores();
+        
+    } catch (error) {
+        console.error('Erro ao alterar status:', error);
         mostrarMensagem(`❌ ${error.message}`, 'error');
     }
 }
@@ -323,6 +464,23 @@ function irParaJogo() {
         return;
     }
     window.location.href = 'partida.html';
+}
+
+// Função para alternar modo admin (pode ser chamada via console ou botão)
+async function toggleAdminMode() {
+    if (isAdmin) {
+        // Desativar modo admin
+        isAdmin = false;
+        localStorage.removeItem('adminAuth');
+        localStorage.removeItem('adminExpiry');
+        localStorage.removeItem('adminUser');
+        mostrarMensagem('🔐 Modo administrador desativado', 'info');
+    } else {
+        // Ativar modo admin
+        await solicitarSenhaAdmin();
+    }
+    
+    carregarJogadores(); // Recarregar para atualizar botões
 }
 
 // Mostrar mensagens

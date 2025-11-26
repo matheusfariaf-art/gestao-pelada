@@ -71,6 +71,7 @@ let estadoPartida = {
     acabouDeRetomar: false, // Flag para evitar salvamentos logo após retomar
     substituicoes: [], // Array de substituições realizadas
     contadorSubstituicoes: 0, // Contador para calcular próxima posição
+    finalizando: false, // Flag para prevenir múltiplas finalizações
     // Sistema de cores (padrão: A=preto, B=vermelho)
     coresColetes: {
         timeA: 'black',
@@ -312,6 +313,22 @@ async function carregarPartida() {
             console.log('⚽ Gols carregados:', estadoPartida.golsPartida);
         }
         
+        // Carregar substituições da partida
+        if (jogo.substituicoes) {
+            try {
+                estadoPartida.substituicoes = JSON.parse(jogo.substituicoes);
+                estadoPartida.contadorSubstituicoes = estadoPartida.substituicoes.length;
+                console.log('🔄 Substituições carregadas:', estadoPartida.substituicoes);
+            } catch (error) {
+                console.warn('⚠️ Erro ao carregar substituições:', error);
+                estadoPartida.substituicoes = [];
+                estadoPartida.contadorSubstituicoes = 0;
+            }
+        } else {
+            estadoPartida.substituicoes = [];
+            estadoPartida.contadorSubstituicoes = 0;
+        }
+        
         // Atualizar interface
         await renderizarPartida();
         
@@ -409,7 +426,26 @@ async function renderizarTime(time, jogadores, containerId) {
     const mapaJogadores = {};
     todosJogadores.forEach(j => mapaJogadores[j.id] = j);
     
-    for (const jogadorId of jogadores) {
+    // Aplicar substituições carregadas do banco
+    let jogadoresFinais = [...jogadores];
+    if (estadoPartida.substituicoes && estadoPartida.substituicoes.length > 0) {
+        console.log(`🔄 Aplicando ${estadoPartida.substituicoes.length} substituições para ${time}`);
+        
+        for (const substituicao of estadoPartida.substituicoes) {
+            const jogadorSaiuId = substituicao.jogador_saiu?.id;
+            const jogadorEntrouId = substituicao.jogador_entrou?.id;
+            
+            // Verificar se a substituição afeta este time
+            const indexJogadorSaiu = jogadoresFinais.indexOf(jogadorSaiuId);
+            if (indexJogadorSaiu !== -1) {
+                console.log(`🔄 Aplicando substituição: ${mapaJogadores[jogadorSaiuId]?.nome} → ${mapaJogadores[jogadorEntrouId]?.nome} no ${time}`);
+                // Substituir o jogador na lista
+                jogadoresFinais[indexJogadorSaiu] = jogadorEntrouId;
+            }
+        }
+    }
+    
+    for (const jogadorId of jogadoresFinais) {
         const jogador = mapaJogadores[jogadorId];
         if (!jogador) continue;
         
@@ -418,10 +454,21 @@ async function renderizarTime(time, jogadores, containerId) {
         // Criar emojis de bolinhas para gols
         const bolinhasGols = golsNaPartida > 0 ? ' ' + '⚽'.repeat(golsNaPartida) : '';
         
+        // Verificar se este jogador é um substituto
+        const ehSubstituto = estadoPartida.substituicoes?.some(sub => 
+            sub.jogador_entrou?.id === jogadorId
+        );
+        
         const playerDiv = document.createElement('div');
         playerDiv.className = 'player-item';
+        
+        // Adicionar classe especial para substitutos
+        if (ehSubstituto) {
+            playerDiv.classList.add('player-substituto');
+        }
+        
         playerDiv.innerHTML = `
-            <div class="player-name" data-jogador-id="${jogadorId}" data-time="${time}" data-nome="${jogador.nome}">${jogador.nome}${bolinhasGols}</div>
+            <div class="player-name" data-jogador-id="${jogadorId}" data-time="${time}" data-nome="${jogador.nome}">${jogador.nome}${bolinhasGols}${ehSubstituto ? ' 🔄' : ''}</div>
         `;
         
         // Adicionar event listener para seleção de gol
@@ -920,6 +967,13 @@ function atualizarBotoes() {
 
 // Mostrar modal personalizado de fim de tempo
 async function mostrarModalFimTempo() {
+    // Verificar se modal já está sendo exibido
+    const modal = document.getElementById('modal-fim-tempo');
+    if (modal.style.display === 'flex') {
+        console.log('⚠️ Modal de fim de tempo já está sendo exibido, ignorando duplicação');
+        return;
+    }
+    
     // Obter nomes das cores dos coletes
     const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
     const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
@@ -1011,8 +1065,7 @@ async function mostrarModalFimTempo() {
     }
     document.getElementById('resultado-texto').innerHTML = resultadoTexto;
     
-    // Mostrar modal
-    const modal = document.getElementById('modal-fim-tempo');
+    // Mostrar modal (reutilizando a variável modal já declarada)
     modal.style.display = 'flex';
     
     // Prevenir scroll do body
@@ -1066,6 +1119,13 @@ function selecionarTimePrioridade(corSelecionada) {
 
 // Modal para confirmar empate manual
 async function mostrarModalConfirmarEmpate() {
+    // Verificar se modal já está sendo exibido
+    const modal = document.getElementById('modal-confirmar-empate');
+    if (modal.style.display === 'flex') {
+        console.log('⚠️ Modal de empate já está sendo exibido, ignorando duplicação');
+        return;
+    }
+    
     const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
     const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
     
@@ -1171,6 +1231,13 @@ async function mostrarModalConfirmarEmpate() {
 
 // Modal para confirmar vitória
 async function mostrarModalConfirmarVitoria(timeVencedor, nomeTimeVencedor) {
+    // Verificar se modal já está sendo exibido
+    const modal = document.getElementById('modal-confirmar-vitoria');
+    if (modal.style.display === 'flex') {
+        console.log('⚠️ Modal de vitória já está sendo exibido, ignorando duplicação');
+        return;
+    }
+    
     const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
     const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
     
@@ -1180,13 +1247,22 @@ async function mostrarModalConfirmarVitoria(timeVencedor, nomeTimeVencedor) {
     document.getElementById('placar-vitoria-a').textContent = estadoPartida.placarA;
     document.getElementById('placar-vitoria-b').textContent = estadoPartida.placarB;
     
-    // Buscar vitórias consecutivas reais do banco de dados
+    // Buscar vitórias consecutivas do time que realmente venceu
     let vitoriasAtuais = 0;
     try {
-        vitoriasAtuais = await obterVitoriasConsecutivasTimeA();
+        if (timeVencedor === 'A') {
+            // Time A venceu - buscar vitórias do Time A
+            vitoriasAtuais = await obterVitoriasConsecutivasTimeA();
+            console.log(`🏆 Time A venceu - vitórias atuais: ${vitoriasAtuais}`);
+        } else {
+            // Time B venceu - Time B sempre inicia nova sequência (nova lógica)
+            // Na rotação, Time B vira o novo Time A com 1 vitória
+            vitoriasAtuais = 0; // Time B não tinha vitórias consecutivas antes
+            console.log(`🏆 Time B venceu - iniciará nova sequência`);
+        }
     } catch (error) {
         console.warn('Erro ao buscar vitórias consecutivas:', error);
-        vitoriasAtuais = estadoPartida.vitoriasConsecutivas || 0;
+        vitoriasAtuais = 0;
     }
     
     // Calcular próxima vitória (atual + 1)
@@ -1198,13 +1274,16 @@ async function mostrarModalConfirmarVitoria(timeVencedor, nomeTimeVencedor) {
     // Verificar se é terceira vitória consecutiva
     const avisoTerceiraVitoria = document.getElementById('aviso-terceira-vitoria');
     
-    if (vitoriasAtuais >= 2) { // Será a terceira vitória
+    if (timeVencedor === 'A' && vitoriasAtuais >= 2) { 
+        // Só mostra aviso se Time A venceu E já tinha 2+ vitórias (será a 3ª)
         avisoTerceiraVitoria.style.display = 'block';
         document.getElementById('time-terceira-vitoria').textContent = nomeTimeVencedor;
         document.getElementById('titulo-vitoria').textContent = 'Terceira Vitória!';
+        console.log(`🔥 Time A atingiu 3ª vitória consecutiva!`);
     } else {
         avisoTerceiraVitoria.style.display = 'none';
         document.getElementById('titulo-vitoria').textContent = 'Vitória!';
+        console.log(`✅ Vitória normal - não é terceira consecutiva`);
     }
     
     // Salvar informação do time vencedor
@@ -1220,6 +1299,9 @@ function fecharModaisConfirmacao() {
     document.getElementById('modal-confirmar-empate').style.display = 'none';
     document.getElementById('modal-confirmar-vitoria').style.display = 'none';
     document.body.style.overflow = '';
+    
+    // Resetar flag de finalização para permitir nova tentativa se necessário
+    estadoPartida.finalizando = false;
     
     // Limpar seleções
     document.querySelectorAll('.btn-time').forEach(btn => {
@@ -1941,6 +2023,15 @@ async function cancelarPartida() {
 }
 
 async function finalizarPartida() {
+    // Verificar se já está finalizando para evitar duplicação
+    if (estadoPartida.finalizando) {
+        console.log('⚠️ Partida já está sendo finalizada, ignorando chamada duplicada');
+        return;
+    }
+    
+    // Marcar como finalizando
+    estadoPartida.finalizando = true;
+    
     const nomeCorTimeA = obterNomeCor(estadoPartida.coresColetes.timeA);
     const nomeCorTimeB = obterNomeCor(estadoPartida.coresColetes.timeB);
     
@@ -3269,31 +3360,18 @@ async function obterFilaCompleta() {
 async function salvarSubstituicao(substituicaoInfo) {
     try {
         console.log('💾 Tentando salvar substituição:', substituicaoInfo);
-        
-        // Por enquanto, apenas loggar a substituição
-        // TODO: Implementar tabela específica para substituições se necessário
         console.log('📋 Substituições atuais do estado:', estadoPartida.substituicoes);
-        console.log('✅ Substituição registrada no estado da partida (não salva no banco)');
         
-        // Comentado até que a estrutura do banco seja ajustada
-        /*
-        const supabase = initializeSupabase();
-        if (!supabase) throw new Error('Supabase não inicializado');
+        // Salvar substituições no jogo atual
+        const resultado = await atualizarJogoNoBanco(estadoPartida.jogoId, {
+            substituicoes: JSON.stringify(estadoPartida.substituicoes)
+        });
         
-        // Obter sessão ativa para salvar a substituição
-        const sessaoAtiva = await obterSessaoAtiva();
-        if (!sessaoAtiva) throw new Error('Nenhuma sessão ativa');
-        
-        const { error } = await supabase
-            .from('sessoes')
-            .update({ 
-                substituicoes: estadoPartida.substituicoes
-            })
-            .eq('id', sessaoAtiva.id);
-            
-        if (error) throw error;
-        console.log('✅ Substituição salva no banco');
-        */
+        if (resultado.success) {
+            console.log('✅ Substituições salvas no jogo');
+        } else {
+            console.warn('⚠️ Erro ao salvar substituições no banco:', resultado.error);
+        }
     } catch (error) {
         console.error('Erro ao salvar substituição:', error);
         // Não interrompe o fluxo em caso de erro de salvamento

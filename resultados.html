@@ -62,9 +62,17 @@
                 <!-- As partidas serão inseridas aqui via JavaScript -->
             </section>
 
+            <!-- Botão Exportar Imagem -->
+            <section id="export-section" class="export-section" style="display: none;">
+                <button id="btn-exportar" class="btn-export">
+                    <span class="emoji">📷</span>
+                    <span>Exportar como Imagem</span>
+                </button>
+            </section>
+
             <!-- Estado Vazio -->
             <div id="empty-state" class="empty-state" style="display: none;">
-                <div class="empty-icon">🏟️</div>
+                <div class="empty-icon">🥅</div>
                 <h3>Nenhuma partida encontrada</h3>
                 <p>Não há partidas finalizadas no período selecionado.</p>
             </div>
@@ -162,6 +170,9 @@
         </div>
     </div>
 
+    <!-- html2canvas para exportar imagem -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <!-- Supabase CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="database.js"></script>

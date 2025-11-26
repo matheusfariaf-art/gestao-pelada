@@ -46,6 +46,43 @@ body {
     font-weight: 500;
 }
 
+/* Header com botão admin */
+.header-with-admin {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-with-admin h2 {
+    margin-bottom: 0;
+    text-align: left;
+}
+
+.btn-admin-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 6px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.btn-admin-toggle:hover {
+    opacity: 1;
+    background: #e9ecef;
+    transform: scale(1.1);
+}
+
+.btn-admin-toggle .emoji {
+    font-size: 0.9rem;
+}
+
 /* Form */
 .form {
     display: flex;
@@ -234,12 +271,29 @@ body {
     background: #dc3545;
 }
 
+.btn-status {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+}
+
 .btn-action:hover {
     transform: scale(1.1);
 }
 
 .btn-action .emoji {
     font-size: 1rem;
+}
+
+/* Jogadores inativos */
+.player-inactive {
+    opacity: 0.5;
+    background: #f0f0f0 !important;
+    border-left-color: #999 !important;
+}
+
+.player-inactive .player-name {
+    color: #666 !important;
+    text-decoration: line-through;
 }
 
 .empty-state {

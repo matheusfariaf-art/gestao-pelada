@@ -19,13 +19,27 @@ document.addEventListener('DOMContentLoaded', inicializar);
 
 async function inicializar() {
     try {
+        // Tentar carregar regras (com fallback automático)
         await carregarRegras();
+        
+        // Tentar carregar jogadores
         await carregarJogadores();
+        
+        // Configurar interface
         configurarEventListeners();
         configurarEstadoInicial();
+        
+        console.log('✅ Sistema de sorteio inicializado com sucesso');
+        
     } catch (error) {
-        console.error('Erro na inicialização:', error);
-        mostrarMensagem('❌ Erro ao carregar a página', 'error');
+        console.error('❌ Erro crítico na inicialização:', error);
+        
+        // Ainda assim tentar configurar o básico
+        configurarEventListeners();
+        configurarEstadoInicial();
+        
+        // Mostrar mensagem mais amigável
+        mostrarMensagem('⚠️ Alguns dados não puderam ser carregados. Verifique sua conexão e recarregue a página.', 'warning');
     }
 }
 
@@ -56,30 +70,53 @@ function configurarEventListeners() {
 // Carregar regras do banco
 async function carregarRegras() {
     try {
-        const resultado = await Database.buscarRegras();
+        // Tentar carregar regras do banco com timeout otimizado
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout ao carregar regras')), 3000) // Reduzido para 3s
+        );
+        
+        const resultado = await Promise.race([Database.buscarRegras(), timeoutPromise]);
         
         if (resultado.success && resultado.data && resultado.data.length > 0) {
             regrasAtivas = resultado.data[0];
+            console.log('✅ Regras carregadas do banco:', regrasAtivas);
         } else {
-            // Usar regras padrão
+            console.log('⚠️ Nenhuma regra encontrada, usando padrão');
             regrasAtivas = {
                 jogadores_por_time: 6,
                 limite_jogadores: 30
             };
         }
     } catch (error) {
-        console.error('Erro ao carregar regras:', error);
-        // Usar regras padrão em caso de erro
+        console.warn('⚠️ Erro ao carregar regras (usando fallback):', error.message);
+        
+        // Usar regras padrão em caso de erro de conectividade
         regrasAtivas = {
             jogadores_por_time: 6,
             limite_jogadores: 30
         };
+        
+        // Mostrar aviso discreto (não bloquear a funcionalidade)
+        console.log('🔧 Sistema funcionando offline com configurações padrão');
     }
 }
 
-// Carregar jogadores do banco
+// Cache para jogadores
+let jogadoresCache = null;
+let jogadoresCacheTime = 0;
+const JOGADORES_CACHE_DURATION = 60000; // 1 minuto
+
+// Carregar jogadores do banco (com cache)
 async function carregarJogadores() {
     try {
+        // Verificar cache primeiro
+        if (jogadoresCache && Date.now() - jogadoresCacheTime < JOGADORES_CACHE_DURATION) {
+            console.log('📋 Usando jogadores do cache');
+            jogadoresDisponiveis = jogadoresCache;
+            renderizarListaJogadores();
+            return;
+        }
+        
         listaJogadores.innerHTML = `
             <div class="loading-state">
                 <span class="emoji">⏳</span>
@@ -93,7 +130,12 @@ async function carregarJogadores() {
             throw new Error(resultado.error);
         }
 
-        jogadoresDisponiveis = resultado.data || [];
+        // Filtrar apenas jogadores ativos
+        const todosJogadores = resultado.data || [];
+        jogadoresDisponiveis = todosJogadores.filter(jogador => {
+            const status = jogador.status || 'ativo'; // Default para ativo se não tiver status
+            return status === 'ativo';
+        });
         
         if (jogadoresDisponiveis.length === 0) {
             listaJogadores.innerHTML = `
@@ -106,6 +148,11 @@ async function carregarJogadores() {
             return;
         }
 
+        // Armazenar no cache
+        jogadoresCache = jogadoresDisponiveis;
+        jogadoresCacheTime = Date.now();
+        console.log(`📋 Cache atualizado: ${jogadoresDisponiveis.length} jogadores`);
+        
         renderizarListaJogadores();
         
     } catch (error) {
@@ -269,6 +316,9 @@ function sortearTimes() {
         // NOVO SISTEMA PROFISSIONAL: 13 padrões em ordem de prioridade
         executarSorteioInteligente(jogadoresPorNivel, timesFormados, jogadoresPorTime);
         
+        // EMBARALHAMENTO AUTOMÁTICO: Randomizar ordem dos jogadores dentro de cada time
+        embaralharJogadoresDentroDosTimes(timesFormados);
+        
         // Calcular nível médio de cada time
         timesFormados.forEach(time => {
             if (time.jogadores.length > 0) {
@@ -277,9 +327,12 @@ function sortearTimes() {
             }
         });
         
-        setTimeout(() => {
-            exibirResultado();
-        }, 1000);
+        // Usar requestAnimationFrame para melhor performance visual
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                exibirResultado();
+            }, 500); // Reduzido de 1000ms para 500ms
+        });
         
     } catch (error) {
         console.error('Erro no sorteio:', error);
@@ -295,6 +348,30 @@ function embaralharArray(array) {
         [arrayCopy[i], arrayCopy[j]] = [arrayCopy[j], arrayCopy[i]];
     }
     return arrayCopy;
+}
+
+// Embaralhar jogadores dentro de cada time (após formação dos padrões)
+function embaralharJogadoresDentroDosTimes(times) {
+    console.log('🎲 Embaralhando ordem dos jogadores dentro de cada time...');
+    console.log(`📊 Total de times para embaralhar: ${times.length}`);
+    
+    let timesEmbaralhados = 0;
+    
+    times.forEach((time, index) => {
+        if (time.jogadores && time.jogadores.length > 0) {
+            console.log(`📝 ${time.nome} (${index + 1}/${times.length}) - ANTES: ${time.jogadores.map(j => `${j.nome}(${j.nivel_habilidade || 3}⭐)`).join(', ')}`);
+            
+            // Embaralhar a ordem dos jogadores dentro do time
+            time.jogadores = embaralharArray(time.jogadores);
+            
+            console.log(`🎯 ${time.nome} (${index + 1}/${times.length}) - DEPOIS: ${time.jogadores.map(j => `${j.nome}(${j.nivel_habilidade || 3}⭐)`).join(', ')}`);
+            timesEmbaralhados++;
+        } else {
+            console.log(`⚠️ ${time.nome} (${index + 1}/${times.length}) - Time vazio, pulando embaralhamento`);
+        }
+    });
+    
+    console.log(`✅ Embaralhamento concluído! ${timesEmbaralhados}/${times.length} times embaralhados - padrões mantidos, ordem randomizada!`);
 }
 
 // Separar jogadores por nível

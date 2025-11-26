@@ -1,4 +1,24 @@
 // ========== LOADING STATES ==========
+// Cache simples para dados frequentemente acessados
+const dataCache = new Map();
+const CACHE_TTL = 30000; // 30 segundos
+
+function setCache(key, data) {
+    dataCache.set(key, {
+        data: data,
+        timestamp: Date.now()
+    });
+}
+
+function getCache(key) {
+    const cached = dataCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data;
+    }
+    dataCache.delete(key);
+    return null;
+}
+
 // Função para mostrar skeleton loading em times
 function showTeamSkeleton(teamNumber) {
     const tbody = document.getElementById(`team${teamNumber}-body`);
@@ -122,11 +142,11 @@ function throttle(func, limit) {
     };
 }
 
-// Versões debounced das principais operações
+// Versões debounced das principais operações (otimizadas)
 const debouncedReloadQueue = debounce(async function() {
     console.log('🔄 Executando reload da fila (debounced)...');
     await recarregarFila();
-}, 500);
+}, 300); // Reduzido de 500ms para 300ms
 
 const debouncedRenderInterface = debounce(async function() {
     console.log('🎨 Executando renderização (debounced)...');
@@ -967,6 +987,50 @@ async function renderTeamSimple(teamNumber, startIndex, endIndex) {
     console.log(`✅ Time ${teamNumber} renderizado com ${teamPlayers.length} jogadores`);
 }
 
+// Calcular estatísticas de um jogador em background
+async function calculateStatsAsync(playerId) {
+    try {
+        // Verificar se já não está no cache
+        if (getCachedStats(playerId)) return;
+        
+        const stats = await calcularEstatisticasJogador(playerId);
+        setCachedStats(playerId, stats);
+    } catch (error) {
+        console.warn('Erro ao calcular stats em background:', error);
+    }
+}
+
+// Função para pré-calcular todas as estatísticas de forma otimizada
+async function preCalculateStats() {
+const CACHE_DURATION = 30000; // 30 segundos
+
+// Função para limpar cache expirado
+function clearExpiredCache() {
+    const now = Date.now();
+    for (const [key, value] of statsCache.entries()) {
+        if (now - value.timestamp > CACHE_DURATION) {
+            statsCache.delete(key);
+        }
+    }
+}
+
+// Função para obter stats do cache ou calcular
+function getCachedStats(playerId) {
+    const cached = statsCache.get(playerId);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+    }
+    return null;
+}
+
+// Função para armazenar stats no cache
+function setCachedStats(playerId, stats) {
+    statsCache.set(playerId, {
+        data: stats,
+        timestamp: Date.now()
+    });
+}
+
 // Função para pré-calcular todas as estatísticas de forma otimizada
 async function preCalculateStats() {
     console.log('📊 Iniciando pré-cálculo otimizado de estatísticas...');
@@ -1631,14 +1695,26 @@ async function mostrarAdicionar() {
 async function renderPlayersForSelection(players, operacao) {
     let html = '';
     
-    // Pré-calcular todas as estatísticas primeiro (usando cache otimizado)
-    const playerIds = players.map(p => p.id || p.jogador_id);
-    await preCalculateStatsForPlayers(playerIds);
+    // Limpar cache expirado periodicamente
+    clearExpiredCache();
     
-    for (const jogador of players) {
+    // Lazy loading de estatísticas - não pré-calcular todas
+    console.log('🎯 Renderizando jogadores com lazy loading de stats...');
+    
+    // Processar jogadores em lotes menores para não bloquear UI
+    for (let i = 0; i < players.length; i++) {
+        const jogador = players[i];
         // Para remover da fila, sempre usar jogador_id, não o id do registro da fila
         const jogadorId = jogador.jogador_id || jogador.id;  // Priorizar jogador_id
-        const stats = getCachedStats(jogadorId) || { jogos: 0, vitorias: 0, gols: 0 };
+        
+        // Tentar cache primeiro, senão usar valores padrão
+        let stats = getCachedStats(jogadorId);
+        if (!stats) {
+            stats = { jogos: 0, vitorias: 0, gols: 0 };
+            // Calcular stats assincronamente em background se necessário
+            setTimeout(() => calculateStatsAsync(jogadorId), 0);
+        }
+        
         const playerId = jogadorId;
         const playerName = jogador.nome || jogador.jogador?.nome;
         
@@ -3144,7 +3220,7 @@ async function loadUnifiedLists() {
     }
 }
 
-// Renderizar lista de jogadores com seleção
+// Renderizar lista de jogadores com seleção (otimizada)
 async function renderPlayersList(players, type) {
     if (!players || players.length === 0) {
         return `<div class="empty-list">
@@ -3152,6 +3228,8 @@ async function renderPlayersList(players, type) {
         </div>`;
     }
 
+    // Usar DocumentFragment para melhor performance
+    const fragment = document.createDocumentFragment();
     let html = '';
     for (let i = 0; i < players.length; i++) {
         const player = players[i];

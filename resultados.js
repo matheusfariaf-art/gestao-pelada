@@ -86,6 +86,12 @@ function configurarEventos() {
     btnGols.addEventListener('click', () => {
         mostrarModalGols();
     });
+
+    // Botão de exportar imagem
+    const btnExportar = document.getElementById('btn-exportar');
+    if (btnExportar) {
+        btnExportar.addEventListener('click', exportarComoImagem);
+    }
 }
 
 // Preencher datas disponíveis
@@ -147,6 +153,15 @@ async function carregarDados() {
 
         console.log('Todas as partidas do banco:', todasPartidasBanco);
         console.log('Status das partidas:', todasPartidasBanco?.map(p => ({ id: p.id, status: p.status, data: p.created_at })));
+        
+        // Debug: verificar campos de substituições
+        console.log('🔍 DEBUG Substituições nas partidas:', todasPartidasBanco?.map(p => ({
+            id: p.id,
+            status: p.status,
+            temSubstituicoes: !!p.substituicoes,
+            substituicoes: p.substituicoes,
+            colunas: Object.keys(p)
+        })));
 
         // Filtrar apenas as finalizadas
         const partidasFinalizadas = todasPartidasBanco?.filter(p => p.status === 'finalizado') || [];
@@ -220,6 +235,11 @@ async function renderizarResultados(partidas) {
         if (partidas.length === 0) {
             partidasSection.innerHTML = '';
             emptyState.style.display = 'block';
+            // Esconder botão de exportar
+            const exportSection = document.getElementById('export-section');
+            if (exportSection) {
+                exportSection.style.display = 'none';
+            }
             return;
         }
         
@@ -237,6 +257,12 @@ async function renderizarResultados(partidas) {
         partidasSection.innerHTML = partidasComGols.map(partida => 
             criarCardPartida(partida)
         ).join('');
+        
+        // Mostrar botão de exportar se há partidas
+        const exportSection = document.getElementById('export-section');
+        if (exportSection) {
+            exportSection.style.display = 'flex';
+        }
         
     } catch (error) {
         console.error('Erro ao renderizar resultados:', error);
@@ -367,6 +393,43 @@ function renderizarJogadoresPartida(partida) {
     const timeA = partida.time_a || [];
     const timeB = partida.time_b || [];
     const gols = partida.gols || [];
+    
+    // Debug: verificar se substituições existem
+    console.log('🔍 DEBUG Substituições:', {
+        partidaId: partida.id,
+        temSubstituicoes: !!partida.substituicoes,
+        substituicoesRaw: partida.substituicoes,
+        tipoSubstituicoes: typeof partida.substituicoes
+    });
+    
+    // Carregar substituições se existirem
+    let substituicoes = [];
+    if (partida.substituicoes) {
+        try {
+            if (typeof partida.substituicoes === 'string') {
+                substituicoes = JSON.parse(partida.substituicoes);
+            } else if (Array.isArray(partida.substituicoes)) {
+                substituicoes = partida.substituicoes;
+            }
+            console.log('🔄 Substituições carregadas:', substituicoes);
+            console.log('🔍 Estrutura detalhada das substituições:', substituicoes.map(sub => ({
+                jogador_saiu: sub.jogador_saiu,
+                jogador_entrou: sub.jogador_entrou,
+                time: sub.time,
+                id_saiu: sub.jogador_saiu?.id,
+                id_entrou: sub.jogador_entrou?.id
+            })));
+            console.log('🏟️ Times da partida:', {
+                timeA: timeA,
+                timeB: timeB
+            });
+        } catch (error) {
+            console.warn('Erro ao carregar substituições:', error);
+            substituicoes = [];
+        }
+    } else {
+        console.log('❌ Nenhuma substituição encontrada para partida', partida.id);
+    }
 
     if (timeA.length === 0 && timeB.length === 0) {
         return '';
@@ -381,27 +444,111 @@ function renderizarJogadoresPartida(partida) {
         golsPorJogador[gol.jogador_id]++;
     });
 
+    // Função para renderizar jogador com possível substituição
+    function renderizarJogador(jogadorId, time) {
+        const nomeJogador = obterNomeJogador(jogadorId);
+        const numGols = golsPorJogador[jogadorId] || 0;
+        const bolasGol = numGols > 0 ? '⚽'.repeat(numGols) + ' ' : '';
+        
+        console.log(`🔍 Renderizando jogador ${jogadorId} (${nomeJogador}) do time ${time}`);
+        
+        // Verificar se este jogador foi substituído (sem depender do campo 'time')
+        const substituicao = substituicoes.find(sub => {
+            const jogadorSaiuId = sub.jogador_saiu?.id || sub.jogadorSaiu;
+            console.log(`🔍 Comparando substituição: ${jogadorId} === ${jogadorSaiuId}`);
+            
+            // Verificar se o jogador que saiu está no time atual sendo renderizado
+            const jogadorEstaNoTime = (time === 'A' ? timeA : timeB).includes(jogadorId);
+            
+            return jogadorSaiuId === jogadorId && jogadorEstaNoTime;
+        });
+        
+        if (substituicao) {
+            console.log(`🔄 SUBSTITUIÇÃO ENCONTRADA!`, substituicao);
+            const jogadorEntrouId = substituicao.jogador_entrou?.id || substituicao.jogadorEntrou;
+            const nomeSubstituto = obterNomeJogador(jogadorEntrouId);
+            const golsSubstituto = golsPorJogador[jogadorEntrouId] || 0;
+            const bolasGolSubstituto = golsSubstituto > 0 ? '⚽'.repeat(golsSubstituto) + ' ' : '';
+            
+            return `
+                <div class="jogador-substituido">
+                    <div class="jogador-nome jogador-saiu">${bolasGol}${nomeJogador}</div>
+                    <div class="jogador-nome jogador-entrou">${bolasGolSubstituto}${nomeSubstituto}</div>
+                </div>
+            `;
+        }
+        
+        // Verificar se este jogador entrou como substituto (não mostrar duplicado)
+        const jaEhSubstituto = substituicoes.some(sub => {
+            const jogadorEntrouId = sub.jogador_entrou?.id || sub.jogadorEntrou;
+            // Verificar se o substituto fez gol (pode não estar na lista original do time)
+            return jogadorEntrouId === jogadorId;
+        });
+        
+        if (jaEhSubstituto) {
+            console.log(`➡️ Jogador ${nomeJogador} é um substituto, não será mostrado duplicado`);
+            return ''; // Já será mostrado como substituto acima
+        }
+        
+        return `<div class="jogador-nome">${bolasGol}${nomeJogador}</div>`;
+    }
+
+    // Renderizar com substituições (lógica simplificada)
+    function renderizarTimeComSubstituicoes(jogadores, nomeTime) {
+        console.log(`🏟️ Renderizando ${nomeTime} com ${jogadores.length} jogadores`);
+        
+        let html = '';
+        const jogadoresJaProcessados = new Set();
+        
+        for (let jogadorId of jogadores) {
+            if (jogadoresJaProcessados.has(jogadorId)) continue;
+            
+            const nomeJogador = obterNomeJogador(jogadorId);
+            const numGols = golsPorJogador[jogadorId] || 0;
+            const bolasGol = numGols > 0 ? '⚽'.repeat(numGols) + ' ' : '';
+            
+            // Buscar se este jogador foi substituído
+            const substituicao = substituicoes.find(sub => {
+                const idSaiu = sub.jogador_saiu?.id;
+                return idSaiu === jogadorId;
+            });
+            
+            if (substituicao) {
+                const idEntrou = substituicao.jogador_entrou?.id;
+                const nomeSubstituto = obterNomeJogador(idEntrou);
+                const golsSubstituto = golsPorJogador[idEntrou] || 0;
+                const bolasGolSubstituto = golsSubstituto > 0 ? '⚽'.repeat(golsSubstituto) + ' ' : '';
+                
+                console.log(`🔄 ${nomeTime}: ${nomeJogador} → ${nomeSubstituto}`);
+                
+                html += `
+                    <div class="jogador-substituido">
+                        <div class="jogador-nome jogador-saiu">${bolasGol}${nomeJogador}</div>
+                        <div class="jogador-nome jogador-entrou">${bolasGolSubstituto}${nomeSubstituto}</div>
+                    </div>
+                `;
+                jogadoresJaProcessados.add(jogadorId);
+                jogadoresJaProcessados.add(idEntrou);
+            } else {
+                html += `<div class="jogador-nome">${bolasGol}${nomeJogador}</div>`;
+                jogadoresJaProcessados.add(jogadorId);
+            }
+        }
+        
+        return html;
+    }
+
     return `
         <div class="partida-jogadores">
             <div class="jogadores-grid">
                 <div class="time-jogadores">
                     <div class="jogadores-lista">
-                        ${timeA.map(jogadorId => {
-                            const nomeJogador = obterNomeJogador(jogadorId);
-                            const numGols = golsPorJogador[jogadorId] || 0;
-                            const bolasGol = numGols > 0 ? '⚽'.repeat(numGols) + ' ' : '';
-                            return `<div class="jogador-nome">${bolasGol}${nomeJogador}</div>`;
-                        }).join('')}
+                        ${renderizarTimeComSubstituicoes(timeA, 'Time A')}
                     </div>
                 </div>
                 <div class="time-jogadores">
                     <div class="jogadores-lista">
-                        ${timeB.map(jogadorId => {
-                            const nomeJogador = obterNomeJogador(jogadorId);
-                            const numGols = golsPorJogador[jogadorId] || 0;
-                            const bolasGol = numGols > 0 ? '⚽'.repeat(numGols) + ' ' : '';
-                            return `<div class="jogador-nome">${bolasGol}${nomeJogador}</div>`;
-                        }).join('')}
+                        ${renderizarTimeComSubstituicoes(timeB, 'Time B')}
                     </div>
                 </div>
             </div>
@@ -939,4 +1086,140 @@ function configurarBotaoHome() {
         homeLink.style.cursor = 'pointer';
         homeLink.style.filter = 'none';
     }
+}
+
+// Função para exportar como imagem
+async function exportarComoImagem() {
+    const btnExportar = document.getElementById('btn-exportar');
+    const originalText = btnExportar.innerHTML;
+    
+    try {
+        // Mostrar loading
+        btnExportar.disabled = true;
+        btnExportar.innerHTML = `
+            <span class="emoji">⏳</span>
+            <span>Gerando imagem...</span>
+        `;
+        
+        // Elemento que será capturado (main container)
+        const container = document.querySelector('.container');
+        
+        // Esconder temporariamente elementos que não devem aparecer na imagem
+        const elementsToHide = [
+            document.querySelector('.footer-mobile'),
+            document.getElementById('export-section'),
+        ];
+        
+        // Salvar estilos originais
+        const originalStyles = elementsToHide.map(el => {
+            if (el) {
+                const display = el.style.display;
+                el.style.display = 'none';
+                return { element: el, display };
+            }
+            return null;
+        }).filter(Boolean);
+        
+        // Adicionar classe especial para exportação
+        document.body.classList.add('exporting');
+        
+        // Configurações do html2canvas
+        const canvas = await html2canvas(container, {
+            backgroundColor: '#ffffff',
+            scale: 2, // Alta qualidade
+            useCORS: true,
+            allowTaint: true,
+            height: container.scrollHeight,
+            width: container.scrollWidth,
+            scrollX: 0,
+            scrollY: 0,
+            logging: false
+        });
+        
+        // Remover classe de exportação
+        document.body.classList.remove('exporting');
+        
+        // Restaurar elementos escondidos
+        originalStyles.forEach(({ element, display }) => {
+            element.style.display = display;
+        });
+        
+        // Converter canvas para blob
+        canvas.toBlob((blob) => {
+            // Criar nome do arquivo baseado na data atual
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString('pt-BR').replace(/\//g, '-');
+            const horaFormatada = agora.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }).replace(':', 'h');
+            
+            const nomeArquivo = `Pelada3_Resultados_${dataFormatada}_${horaFormatada}.png`;
+            
+            // Criar link de download
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = nomeArquivo;
+            
+            // Executar download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Limpar URL
+            URL.revokeObjectURL(url);
+            
+            // Mostrar sucesso
+            mostrarMensagem(`📸 Imagem salva como: ${nomeArquivo}`, 'success');
+        }, 'image/png', 0.95);
+        
+    } catch (error) {
+        console.error('Erro ao exportar imagem:', error);
+        mostrarMensagem('❌ Erro ao gerar imagem', 'error');
+    } finally {
+        // Restaurar botão
+        btnExportar.disabled = false;
+        btnExportar.innerHTML = originalText;
+    }
+}
+
+// Função para mostrar mensagens
+function mostrarMensagem(texto, tipo = 'info') {
+    // Remover mensagem anterior se existir
+    const mensagemExistente = document.querySelector('.toast-message');
+    if (mensagemExistente) {
+        mensagemExistente.remove();
+    }
+    
+    // Criar nova mensagem
+    const toast = document.createElement('div');
+    toast.className = `toast-message toast-${tipo}`;
+    toast.textContent = texto;
+    
+    // Estilos inline para o toast
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: ${tipo === 'success' ? '#2d8f2d' : tipo === 'error' ? '#dc3545' : '#007bff'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        z-index: 10000;
+        max-width: 350px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remover após 4 segundos
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 4000);
 }

@@ -249,6 +249,8 @@ body {
     transform: translateY(-1px);
 }
 
+/* Estilos para jogadores substitutos - removidos para manter visual padrão */
+
 .player-name {
     font-size: 0.75rem;
     font-weight: 500;

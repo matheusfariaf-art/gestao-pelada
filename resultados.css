@@ -264,6 +264,37 @@ body {
     color: #333;
 }
 
+/* Estilos para substituições */
+.jogador-substituido {
+    margin-bottom: 8px;
+    border-left: 3px solid #f0f0f0;
+    padding-left: 8px;
+}
+
+.jogador-saiu {
+    text-decoration: line-through;
+    opacity: 0.6;
+    color: #999 !important;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+}
+
+.jogador-entrou {
+    color: #2d8f2d !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+    position: relative;
+    padding-left: 15px;
+}
+
+.jogador-entrou:before {
+    content: "↳";
+    position: absolute;
+    left: 0;
+    color: #2d8f2d;
+    font-weight: bold;
+}
+
 .jogador-stats {
     color: #666;
     font-size: 0.9rem;
@@ -477,6 +508,76 @@ body {
     border-radius: 4px;
     text-align: center;
     line-height: 1.2;
+}
+
+/* Export Section */
+.export-section {
+    display: flex;
+    justify-content: center;
+    margin: 30px 0;
+    padding: 20px 0;
+}
+
+.btn-export {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #2d8f2d, #1e6b1e);
+    color: white;
+    border: none;
+    border-radius: 15px;
+    padding: 15px 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(45, 143, 45, 0.3);
+}
+
+.btn-export:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(45, 143, 45, 0.4);
+    background: linear-gradient(135deg, #1e6b1e, #2d8f2d);
+}
+
+.btn-export:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(45, 143, 45, 0.3);
+}
+
+.btn-export .emoji {
+    font-size: 1.2rem;
+}
+
+.btn-export:disabled {
+    background: #ddd;
+    color: #999;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Estilos especiais para exportação */
+.exporting .container {
+    max-width: none;
+    width: 400px;
+    margin: 0;
+    padding: 20px;
+    background: white;
+}
+
+.exporting .header-card {
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.exporting .summary-cards {
+    gap: 15px;
+}
+
+.exporting .partida-card {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 1px solid #f0f0f0;
 }
 
 /* Footer Mobile */

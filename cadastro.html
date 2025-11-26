@@ -41,7 +41,12 @@
 
             <!-- Lista de Jogadores -->
             <section class="players-card">
-                <h2>📝 Jogadores Cadastrados</h2>
+                <div class="header-with-admin">
+                    <h2>📝 Jogadores Cadastrados</h2>
+                    <button class="btn-admin-toggle" onclick="toggleAdminMode()" title="Modo Administrador">
+                        <span class="emoji">🔐</span>
+                    </button>
+                </div>
                 
                 <div id="lista-jogadores" class="players-list">
                     <div class="empty-state">
