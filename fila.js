@@ -157,6 +157,82 @@ const debouncedRenderInterface = debounce(async function() {
 const throttledScroll = throttle(function() {
     // Lógica para eventos de scroll se necessário
 }, 100);
+
+// ========== FUNÇÕES UTILITÁRIAS ==========
+function showError(message) {
+    // Implementar sistema de notificação de erro
+    alert(message);
+}
+
+function showSuccess(message) {
+    // Implementar sistema de notificação de sucesso
+    alert(message);
+}
+
+// Função para mostrar tela sem sessão ativa
+function showNoSessionScreen() {
+    const noSessionScreen = document.getElementById('no-session-screen');
+    const mainContent = document.querySelector('.main');
+    
+    if (noSessionScreen) {
+        noSessionScreen.style.display = 'flex';
+    }
+    
+    if (mainContent) {
+        mainContent.style.display = 'none';
+    }
+}
+
+// Função para esconder tela sem sessão ativa
+function hideNoSessionScreen() {
+    const noSessionScreen = document.getElementById('no-session-screen');
+    const mainContent = document.querySelector('.main');
+    
+    if (noSessionScreen) {
+        noSessionScreen.style.display = 'none';
+    }
+    
+    if (mainContent) {
+        mainContent.style.display = 'block';
+    }
+}
+
+// ========== FUNÇÕES GLOBAIS PARA HTML ==========
+// Função para mostrar painel de gerenciamento UNIFICADO
+function mostrarGerenciamento() {
+    // Verificar se o novo painel está disponível
+    const unifiedPanel = document.querySelector('.management-content-unified');
+    
+    if (unifiedPanel) {
+        // Usar novo painel unificado
+        mostrarGerenciamentoUnificado();
+    } else {
+        // Fallback para painel antigo
+        mostrarGerenciamentoAntigo();
+    }
+}
+
+// Função do painel antigo (backup)
+function mostrarGerenciamentoAntigo() {
+    // Verificar permissão
+    if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
+        return;
+    }
+    
+    const painel = document.getElementById('painel-gerenciamento');
+    if (painel) {
+        painel.style.display = 'flex';
+        
+        // Adicionar listener para fechar clicando no fundo
+        painel.onclick = function(e) {
+            if (e.target === painel) {
+                fecharGerenciamento();
+            }
+        };
+    }
+}
+
+// ========== ESTADO DO JOGO ==========
 let gameState = {
     currentGame: {
         time1: [],
@@ -229,6 +305,71 @@ function showTrackingPreventionError() {
             </button>
         </div>
     `;
+}
+
+// Função para aplicar restrições visuais para jogadores
+function aplicarRestricoesVisuais() {
+    const userRole = localStorage.getItem('userRole');
+    
+    if (userRole === 'player') {
+        console.log('👁️ Aplicando modo visualização para jogador');
+        
+        // Aguardar um pouco para garantir que os elementos foram carregados
+        setTimeout(() => {
+            // Ocultar botões de ação para jogadores
+            const botoesRestringir = [
+                '#go-to-sorteio-btn',
+                '#refresh-queue-btn',
+                '.btn-add-queue',
+                '.btn-remove',
+                '.btn-encerrar-pelada',
+                '.admin-controls',
+                '.action-buttons',
+                'button[onclick*="addPlayer"]',
+                'button[onclick*="removePlayer"]',
+                'button[onclick*="encerrar"]'
+            ];
+            
+            botoesRestringir.forEach(selector => {
+                const elementos = document.querySelectorAll(selector);
+                elementos.forEach(el => {
+                    el.style.display = 'none';
+                });
+            });
+            
+            // Adicionar aviso de modo visualização
+            const container = document.querySelector('.container');
+            if (container) {
+                const avisoDiv = document.createElement('div');
+                avisoDiv.innerHTML = `
+                    <div style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);">
+                        <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">👁️ Modo Visualização</h4>
+                        <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Você está visualizando a fila como jogador. Algumas funcionalidades estão ocultas.</p>
+                    </div>
+                `;
+                container.insertBefore(avisoDiv, container.firstChild);
+            }
+            
+            // Remover event listeners de botões (prevenir ações por teclado/programação)
+            document.querySelectorAll('button').forEach(btn => {
+                if (btn.onclick || btn.getAttribute('onclick')) {
+                    const acoes = ['add', 'remove', 'encerrar', 'clear'];
+                    const temAcao = acoes.some(acao => 
+                        (btn.onclick && btn.onclick.toString().includes(acao)) ||
+                        (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(acao))
+                    );
+                    
+                    if (temAcao) {
+                        btn.onclick = null;
+                        btn.removeAttribute('onclick');
+                        btn.style.cursor = 'not-allowed';
+                        btn.title = 'Ação restrita para jogadores';
+                    }
+                }
+            });
+            
+        }, 1000);
+    }
 }
 
 // Inicialização da página
@@ -616,6 +757,124 @@ function getChangedComponents(newState) {
     }
     
     return changes;
+}
+
+// Função para renderizar os blocos da fila de espera com loading
+async function renderQueueBlocks() {
+    const container = document.getElementById('queue-blocks-container');
+    const queueCount = document.getElementById('queue-count');
+    
+    if (queueCount) {
+        const remainingInQueue = Math.max(0, gameState.queue.length - 12);
+        queueCount.textContent = `${remainingInQueue} aguardando`;
+    }
+    
+    if (!container) return;
+    
+    // Mostrar skeleton se há muitos jogadores para processar
+    if (gameState.queue.length > 12) {
+        showQueueSkeleton();
+        
+        // Small delay to show skeleton
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    // Jogadores a partir da posição 13 (índice 12)
+    const waitingPlayers = gameState.queue.slice(12);
+    
+    if (waitingPlayers.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px;">
+                <span class="emoji" style="font-size: 2rem; display: block; margin-bottom: 10px;">✅</span>
+                <strong>Todos organizados!</strong><br>
+                <small style="color: #666;">Próximos 12 jogadores já estão nos times</small>
+            </div>
+        `;
+        return;
+    }
+    
+    // Dividir jogadores em grupos de 6
+    const blocks = [];
+    for (let i = 0; i < waitingPlayers.length; i += 6) {
+        blocks.push(waitingPlayers.slice(i, i + 6));
+    }
+    
+    let html = '';
+    blocks.forEach((block, blockIndex) => {
+        const isNextUp = blockIndex === 0; // Primeiro bloco é o próximo
+        
+        // Definir o texto do cabeçalho
+        let headerText;
+        if (isNextUp) {
+            headerText = 'Próximo time';
+        } else {
+            headerText = `${blockIndex + 1}º na fila`;
+        }
+        
+        html += `
+            <div class="queue-block ${isNextUp ? 'next-up' : ''}">
+                <div class="queue-block-header">
+                    <h4>${headerText}</h4>
+                </div>
+                <div class="queue-block-table-container">
+                    <table class="queue-block-table">
+                        <tbody>
+        `;
+        
+        // Adicionar jogadores do bloco
+        for (let i = 0; i < 6; i++) {
+            const player = block[i];
+            if (player) {
+                html += `
+                    <tr>
+                        <td class="queue-block-player-name">${player.nome || player.jogador?.nome}</td>
+                    </tr>
+                `;
+            } else {
+                // Linha vazia para completar o time de 6
+                html += `
+                    <tr class="empty-row">
+                        <td class="queue-block-player-name" style="color: #ccc; font-style: italic;">Aguardando jogador...</td>
+                    </tr>
+                `;
+            }
+        }
+        
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function renderReserves() {
+    // Elemento removido da interface - não precisa mais renderizar reserves na tela principal
+    // Reserves agora são acessadas apenas via modal
+    return;
+    
+    if (gameState.reserves.length === 0) {
+        reservesList.innerHTML = `
+            <div class="empty-state">
+                <span class="emoji">✅</span>
+                <h3>Todos na fila!</h3>
+                <p>Todos os jogadores estão jogando ou na fila</p>
+            </div>
+        `;
+        return;
+    }
+    
+    reservesList.innerHTML = gameState.reserves.map(player => `
+        <div class="reserve-item">
+            <span class="reserve-name">${player.nome}</span>
+            <button class="btn-add-queue" onclick="addPlayerToQueue(${player.id})">
+                Adicionar
+            </button>
+        </div>
+    `).join('');
 }
 
 // Função otimizada de renderização que só atualiza o que mudou
@@ -1137,124 +1396,6 @@ async function renderTeam(teamNumber, startIndex, endIndex) {
     console.log(`✅ Time ${teamNumber} renderizado com ${teamPlayers.filter(p => p).length} jogadores`);
 }
 
-// Função para renderizar os blocos da fila de espera com loading
-async function renderQueueBlocks() {
-    const container = document.getElementById('queue-blocks-container');
-    const queueCount = document.getElementById('queue-count');
-    
-    if (queueCount) {
-        const remainingInQueue = Math.max(0, gameState.queue.length - 12);
-        queueCount.textContent = `${remainingInQueue} aguardando`;
-    }
-    
-    if (!container) return;
-    
-    // Mostrar skeleton se há muitos jogadores para processar
-    if (gameState.queue.length > 12) {
-        showQueueSkeleton();
-        
-        // Small delay to show skeleton
-        await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    
-    // Jogadores a partir da posição 13 (índice 12)
-    const waitingPlayers = gameState.queue.slice(12);
-    
-    if (waitingPlayers.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state" style="text-align: center; padding: 40px;">
-                <span class="emoji" style="font-size: 2rem; display: block; margin-bottom: 10px;">✅</span>
-                <strong>Todos organizados!</strong><br>
-                <small style="color: #666;">Próximos 12 jogadores já estão nos times</small>
-            </div>
-        `;
-        return;
-    }
-    
-    // Dividir jogadores em grupos de 6
-    const blocks = [];
-    for (let i = 0; i < waitingPlayers.length; i += 6) {
-        blocks.push(waitingPlayers.slice(i, i + 6));
-    }
-    
-    let html = '';
-    blocks.forEach((block, blockIndex) => {
-        const isNextUp = blockIndex === 0; // Primeiro bloco é o próximo
-        
-        // Definir o texto do cabeçalho
-        let headerText;
-        if (isNextUp) {
-            headerText = 'Próximo time';
-        } else {
-            headerText = `${blockIndex + 1}º na fila`;
-        }
-        
-        html += `
-            <div class="queue-block ${isNextUp ? 'next-up' : ''}">
-                <div class="queue-block-header">
-                    <h4>${headerText}</h4>
-                </div>
-                <div class="queue-block-table-container">
-                    <table class="queue-block-table">
-                        <tbody>
-        `;
-        
-        // Adicionar jogadores do bloco
-        for (let i = 0; i < 6; i++) {
-            const player = block[i];
-            if (player) {
-                html += `
-                    <tr>
-                        <td class="queue-block-player-name">${player.nome || player.jogador?.nome}</td>
-                    </tr>
-                `;
-            } else {
-                // Linha vazia para completar o time de 6
-                html += `
-                    <tr class="empty-row">
-                        <td class="queue-block-player-name" style="color: #ccc; font-style: italic;">Aguardando jogador...</td>
-                    </tr>
-                `;
-            }
-        }
-        
-        html += `
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
-}
-
-function renderReserves() {
-    // Elemento removido da interface - não precisa mais renderizar reserves na tela principal
-    // Reserves agora são acessadas apenas via modal
-    return;
-    
-    if (gameState.reserves.length === 0) {
-        reservesList.innerHTML = `
-            <div class="empty-state">
-                <span class="emoji">✅</span>
-                <h3>Todos na fila!</h3>
-                <p>Todos os jogadores estão jogando ou na fila</p>
-            </div>
-        `;
-        return;
-    }
-    
-    reservesList.innerHTML = gameState.reserves.map(player => `
-        <div class="reserve-item">
-            <span class="reserve-name">${player.nome}</span>
-            <button class="btn-add-queue" onclick="addPlayerToQueue(${player.id})">
-                Adicionar
-            </button>
-        </div>
-    `).join('');
-}
-
 async function addPlayerToQueue(playerId) {
     try {
         const player = gameState.reserves.find(p => p.id === playerId);
@@ -1526,15 +1667,7 @@ async function criarSessaoTeste() {
     }
 }
 
-function showError(message) {
-    // Implementar sistema de notificação de erro
-    alert(message);
-}
-
-function showSuccess(message) {
-    // Implementar sistema de notificação de sucesso
-    alert(message);
-}
+// Funções movidas para o início do arquivo
 
 async function endSession() {
     if (!confirm('Tem certeza que deseja encerrar a sessão? Todos os dados serão mantidos.')) {
@@ -1590,38 +1723,6 @@ function mostrarOpcoesGerenciamento() {
     }
 }
 
-// Função para mostrar painel de gerenciamento UNIFICADO
-function mostrarGerenciamento() {
-    // Verificar se o novo painel está disponível
-    const unifiedPanel = document.querySelector('.management-content-unified');
-    
-    if (unifiedPanel) {
-        // Usar novo painel unificado
-        mostrarGerenciamentoUnificado();
-    } else {
-        // Fallback para painel antigo
-        mostrarGerenciamentoAntigo();
-    }
-}
-
-// Função do painel antigo (backup)
-function mostrarGerenciamentoAntigo() {
-    // Verificar permissão
-    if (typeof hasActionPermission !== 'undefined' && !hasActionPermission()) {
-        return;
-    }
-    
-    const painel = document.getElementById('painel-gerenciamento');
-    if (painel) {
-        painel.style.display = 'flex';
-        
-        // Adicionar listener para fechar clicando no fundo
-        painel.onclick = function(e) {
-            if (e.target === painel) {
-                fecharGerenciamento();
-            }
-        };
-    }
 }
 
 // Função para fechar painel de gerenciamento
@@ -2319,19 +2420,7 @@ async function carregarEstatisticasDia() {
     }
 }
 
-// Função para mostrar tela sem sessão ativa
-function showNoSessionScreen() {
-    const noSessionScreen = document.getElementById('no-session-screen');
-    const mainContent = document.querySelector('.main');
-    
-    if (noSessionScreen) {
-        noSessionScreen.style.display = 'flex';
-    }
-    
-    if (mainContent) {
-        mainContent.style.display = 'none';
-    }
-}
+// Função movida para o início do arquivo
 
 // Função para esconder tela sem sessão ativa
 function hideNoSessionScreen() {
@@ -2596,71 +2685,6 @@ async function solicitarSenhaEncerrarPelada() {
             }
         });
     });
-}
-
-// Função para aplicar restrições visuais para jogadores
-function aplicarRestricoesVisuais() {
-    const userRole = localStorage.getItem('userRole');
-    
-    if (userRole === 'player') {
-        console.log('👁️ Aplicando modo visualização para jogador');
-        
-        // Aguardar um pouco para garantir que os elementos foram carregados
-        setTimeout(() => {
-            // Ocultar botões de ação para jogadores
-            const botoesRestringir = [
-                '#go-to-sorteio-btn',
-                '#refresh-queue-btn',
-                '.btn-add-queue',
-                '.btn-remove',
-                '.btn-encerrar-pelada',
-                '.admin-controls',
-                '.action-buttons',
-                'button[onclick*="addPlayer"]',
-                'button[onclick*="removePlayer"]',
-                'button[onclick*="encerrar"]'
-            ];
-            
-            botoesRestringir.forEach(selector => {
-                const elementos = document.querySelectorAll(selector);
-                elementos.forEach(el => {
-                    el.style.display = 'none';
-                });
-            });
-            
-            // Adicionar aviso de modo visualização
-            const container = document.querySelector('.container');
-            if (container) {
-                const avisoDiv = document.createElement('div');
-                avisoDiv.innerHTML = `
-                    <div style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);">
-                        <h4 style="margin: 0 0 8px 0; font-size: 1.1rem;">👁️ Modo Visualização</h4>
-                        <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">Você está visualizando a fila como jogador. Algumas funcionalidades estão ocultas.</p>
-                    </div>
-                `;
-                container.insertBefore(avisoDiv, container.firstChild);
-            }
-            
-            // Remover event listeners de botões (prevenir ações por teclado/programação)
-            document.querySelectorAll('button').forEach(btn => {
-                if (btn.onclick || btn.getAttribute('onclick')) {
-                    const acoes = ['add', 'remove', 'encerrar', 'clear'];
-                    const temAcao = acoes.some(acao => 
-                        (btn.onclick && btn.onclick.toString().includes(acao)) ||
-                        (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(acao))
-                    );
-                    
-                    if (temAcao) {
-                        btn.onclick = null;
-                        btn.removeAttribute('onclick');
-                        btn.style.cursor = 'not-allowed';
-                        btn.title = 'Ação restrita para jogadores';
-                    }
-                }
-            });
-            
-        }, 1000);
-    }
 }
 
 // ==================== EDITAR ORDEM DA FILA ====================
@@ -4417,4 +4441,15 @@ function createConfirmationModal() {
     `;
     document.body.appendChild(modal);
     return modal;
+}
+
+// Recarregar listas no painel unificado
+function refreshManagementLists() {
+    if (unifiedManagementState.isOpen) {
+        loadUnifiedLists().then(() => {
+            updateCountersAndInterface();
+        }).catch(error => {
+            console.error('Erro ao recarregar listas:', error);
+        });
+    }
 }

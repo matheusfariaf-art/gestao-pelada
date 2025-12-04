@@ -14,7 +14,21 @@ function initializeSupabase() {
         return null;
     }
     if (!client) {
-        client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Configurações específicas para resolver erro 406
+        const options = {
+            db: {
+                schema: 'public'
+            },
+            global: {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Prefer': 'return=representation'
+                }
+            }
+        };
+        
+        client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
         console.log('🔗 Cliente Supabase inicializado com sucesso');
     }
     return client;
@@ -137,40 +151,72 @@ class Database {
     // Buscar sessão ativa
     static async buscarSessaoAtiva() {
         try {
+            // Primeira tentativa: buscar sem .single() para evitar erro 406
             const { data, error } = await client
                 .from('sessoes')
                 .select('*')
                 .eq('status', 'ativa')
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single()
             
-            if (error && error.code !== 'PGRST116') throw error
-            
-            // Se não há sessão ativa, retornar null
-            if (error?.code === 'PGRST116') {
-                return { success: true, data: null }
+            if (error) {
+                console.error('Erro na consulta de sessão ativa:', error);
+                throw error;
             }
             
+            // Se não há dados, retornar null
+            if (!data || data.length === 0) {
+                return { success: true, data: null };
+            }
+            
+            // Pegar o primeiro resultado
+            const sessao = data[0];
+            
             // Verificar se a sessão ativa é do dia atual
-            const sessao = data
-            const dataSessao = new Date(sessao.created_at).toISOString().split('T')[0]
-            const dataAtual = new Date().toISOString().split('T')[0]
+            const dataSessao = new Date(sessao.created_at).toISOString().split('T')[0];
+            const dataAtual = new Date().toISOString().split('T')[0];
             
             // Se a sessão é de outro dia, finalizar automaticamente
             if (dataSessao !== dataAtual) {
-                console.log(`🔄 Finalizando sessão do dia ${dataSessao} automaticamente (hoje é ${dataAtual})`)
+                console.log(`🔄 Finalizando sessão do dia ${dataSessao} automaticamente (hoje é ${dataAtual})`);
                 
-                await this.finalizarSessao(sessao.id)
+                await this.finalizarSessao(sessao.id);
                 
                 // Retornar null pois não há mais sessão ativa
-                return { success: true, data: null }
+                return { success: true, data: null };
             }
             
-            return { success: true, data: sessao }
+            return { success: true, data: sessao };
         } catch (error) {
-            console.error('Erro ao buscar sessão ativa:', error)
-            return { success: false, error: error.message }
+            console.error('Erro ao buscar sessão ativa:', error);
+            
+            // Tratamento específico para erro 406 (Not Acceptable)
+            if (error.code === 406 || error.status === 406) {
+                console.warn('⚠️ Erro 406: Tentando consulta alternativa...');
+                
+                try {
+                    // Consulta alternativa sem order
+                    const { data: dataAlt, error: errorAlt } = await client
+                        .from('sessoes')
+                        .select('*')
+                        .eq('status', 'ativa')
+                        .limit(1);
+                    
+                    if (errorAlt) throw errorAlt;
+                    
+                    if (!dataAlt || dataAlt.length === 0) {
+                        return { success: true, data: null };
+                    }
+                    
+                    return { success: true, data: dataAlt[0] };
+                    
+                } catch (altError) {
+                    console.error('Erro na consulta alternativa:', altError);
+                    return { success: false, error: altError };
+                }
+            }
+            
+            return { success: false, error: error.message };
         }
     }
 
